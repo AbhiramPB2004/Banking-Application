@@ -13,4 +13,5 @@ const {
  */
 router.post("/register", registerUser);
 
+
 module.exports = router;

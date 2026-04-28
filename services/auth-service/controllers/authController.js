@@ -190,14 +190,61 @@ console.log(process.env.DB_PASSWORD);
       tokens,
     });
   } catch (error) {
-    await transaction.rollback();
+await transaction.rollback();
 
-    console.error("Registration Error:", error);
+console.error("Registration Error:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error during registration.",
-    });
+// Sequelize validation failures
+if (error.name === "SequelizeValidationError") {
+  return res.status(400).json({
+    success: false,
+    message: "Validation failed.",
+    errors: error.errors.map((err) => ({
+      field: err.path,
+      message: err.message,
+    })),
+  });
+}
+
+// Sequelize unique constraint failures
+if (error.name === "SequelizeUniqueConstraintError") {
+  return res.status(409).json({
+    success: false,
+    message: "Duplicate field detected.",
+    errors: error.errors.map((err) => ({
+      field: err.path,
+      message: `${err.path} already exists.`,
+    })),
+  });
+}
+
+// Foreign key / relational failures
+if (error.name === "SequelizeForeignKeyConstraintError") {
+  return res.status(400).json({
+    success: false,
+    message: "Related resource validation failed.",
+    error: error.message,
+  });
+}
+
+// Database connection or query failures
+if (error.name === "SequelizeDatabaseError") {
+  return res.status(500).json({
+    success: false,
+    message: "Database operation failed.",
+    error: error.message,
+  });
+}
+
+// Generic fallback
+return res.status(500).json({
+  success: false,
+  message: "Internal server error during registration.",
+  error:
+    process.env.NODE_ENV === "development"
+      ? error.message
+      : undefined,
+});
   }
 }
 
