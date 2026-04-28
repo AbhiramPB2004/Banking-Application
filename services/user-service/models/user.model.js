@@ -27,12 +27,18 @@ const User = sequelize.define(
     },
 
     email: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: true,
-      },
+    type: DataTypes.STRING(254),
+    allowNull: false,
+    unique: true,
+    validate: {
+        isEmail: {
+        msg: "Valid email is required.",
+        },
+        len: {
+        args: [5, 254],
+        msg: "Email length must be between 5 and 254 characters.",
+        },
+    },
     },
 
     phone: {

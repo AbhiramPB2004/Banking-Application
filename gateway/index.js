@@ -1,19 +1,42 @@
+// /gateway/index.js
+
+require("dotenv").config();
+
 const express = require("express");
-const dotenv = require("dotenv");
-
-const authRoutes = require("./Routes/auth.routes");
-
-dotenv.config();
-
 const app = express();
 
+const { sequelize } = require("../shared/config/db");
+
+// Import all models so Sequelize can register them
+require("../services/user-service/models/user.model");
+require("../services/account-service/models/account.model");
+require("../services/auth-service/models/session.model");
+require("../services/audit-service/models/auditLog.model");
+
+// Routes
+const authRoutes = require("./Routes/auth.routes");
+
+// Middleware
 app.use(express.json());
 
 // Gateway routes
 app.use("/auth", authRoutes);
 
-const PORT = process.env.PORT || 5000;
+/**
+ * Sync database tables
+ * Development use only
+ */
+sequelize
+  .sync({ alter: true })
+  .then(() => {
+    console.log("Database tables created/synced successfully.");
 
-app.listen(PORT, () => {
-  console.log(`Gateway running on port ${PORT}`);
-});
+    const PORT = process.env.PORT || 5000;
+
+    app.listen(PORT, () => {
+      console.log(`Gateway running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Database sync failed:", error);
+  });
