@@ -1,0 +1,55 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage reports
+coverage/
+
+# Build outputs
+dist/
+build/
+
+# Sequelize
+migrations/*.js.map
+seeders/*.js.map
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+
+# Package lock optional (keep if team standard allows)
+# package-lock.json
+
+# Test reports
+test-results/
+
+# Docker overrides
+docker-compose.override.yml
+
+# Cache
+.cache/
