@@ -7,25 +7,29 @@ const app = express();
 
 const { sequelize } = require("../shared/config/db");
 
-// Import all models so Sequelize can register them
+// 🔥 1. GLOBAL MIDDLEWARES (ALWAYS FIRST)
+app.use(express.json());
+
+// 🔥 2. IMPORT ROUTES
+const authRoutes = require("./Routes/auth.routes");
+const accountRoutes = require("../services/account-service/routes/account.routes");
+
+// 🔥 3. REGISTER ROUTES
+app.use("/auth", authRoutes);
+app.use("/accounts", accountRoutes);
+
+// 🔥 4. REGISTER MODELS (for Sequelize)
 require("../services/user-service/models/user.model");
 require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
 require("../services/audit-service/models/auditLog.model");
 
-// Routes
-const authRoutes = require("./Routes/auth.routes");
+// 🔥 5. HEALTH CHECK (optional but useful)
+app.get("/", (req, res) => {
+  res.send("Banking API is running...");
+});
 
-// Middleware
-app.use(express.json());
-
-// Gateway routes
-app.use("/auth", authRoutes);
-
-/**
- * Sync database tables
- * Development use only
- */
+// 🔥 6. DATABASE SYNC + SERVER START
 sequelize
   .sync({ alter: true })
   .then(() => {

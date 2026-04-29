@@ -115,15 +115,14 @@ console.log(process.env.DB_PASSWORD);
     // ---------------------------
     // Step 5: Create Account
     // ---------------------------
-    const newAccount = await createAccount({
-      user_id: newUser.user_id,
-      account_type: account.account_type,
-      initial_deposit: account.initial_deposit,
-    });
+   const newAccount = await createAccount(
+  newUser.user_id,
+  account
+);
 
-    // ---------------------------
-    // Step 6: Activate User
-    // ---------------------------
+      // ---------------------------
+      // Step 6: Activate User
+      // ---------------------------
     await activateUser(newUser.user_id);
 
     // ---------------------------
