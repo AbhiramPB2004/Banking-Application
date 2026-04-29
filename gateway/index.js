@@ -12,15 +12,17 @@ require("../services/user-service/models/user.model");
 require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
 require("../services/audit-service/models/auditLog.model");
-
+const authenticateToken = require("../shared/middlewares/authMiddleware");
 // Routes
 const authRoutes = require("./Routes/auth.routes");
+const userRoutes = require("./Routes/user.routes");
 
 // Middleware
 app.use(express.json());
 
 // Gateway routes
 app.use("/auth", authRoutes);
+app.use("/user", authenticateToken , userRoutes);
 
 /**
  * Sync database tables
