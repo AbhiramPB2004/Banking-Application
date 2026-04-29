@@ -1,76 +1,77 @@
-// /services/auth-service/controllers/authController.js
-
+//services/auth-service/controllers/authController.js
+ 
 const { sequelize } = require("../../../shared/config/db");
-
+ 
 const {
   validateAuthInput,
 } = require("../validators/authValidator");
-
+ 
 const {
   validateUserInput,
 } = require("../../user-service/validators/userValidator");
-
+ 
 const {
   validateAccountInput,
 } = require("../../account-service/validators/accountValidator");
-
+ 
 const {
   checkExistingUser,
   createUser,
   activateUser,
 } = require("../../user-service/services/userService");
-
+ 
 const {
   createAccount,
 } = require("../../account-service/services/accountService");
-
+ 
 const {
   prepareUserCredentials,
   generateUserTokens,
   createSession,
 } = require("../services/authService");
-
+ 
 const {
   logRegistration,
   logAccountCreation,
+  logLogin,
 } = require("../../audit-service/services/auditService");
-
+ 
 /**
  * User Registration Controller
  */
 async function registerUser(req, res) {
 console.log(process.env.DB_PASSWORD);
   const transaction = await sequelize.transaction();
-
+ 
   try {
     const {
       auth,
       user,
       account,
     } = req.body;
-
+ 
     // ---------------------------
     // Step 1: Validate Inputs
     // ---------------------------
     const authValidation = validateAuthInput(auth);
     const userValidation = validateUserInput(user);
     const accountValidation = validateAccountInput(account);
-
+ 
     const validationErrors = [
       ...authValidation.errors,
       ...userValidation.errors,
       ...accountValidation.errors,
     ];
-
+ 
     if (validationErrors.length > 0) {
       await transaction.rollback();
-
+ 
       return res.status(400).json({
         success: false,
         errors: validationErrors,
       });
     }
-
+ 
     // ---------------------------
     // Step 2: Check Existing User
     // ---------------------------
@@ -80,17 +81,17 @@ console.log(process.env.DB_PASSWORD);
       aadhaar_number: user.aadhaar_number,
       pan_number: user.pan_number,
     });
-
+ 
     if (existingUser) {
       await transaction.rollback();
-
+ 
       return res.status(409).json({
         success: false,
         message:
           "User with provided email, phone, Aadhaar, or PAN already exists.",
       });
     }
-
+ 
     // ---------------------------
     // Step 3: Hash Credentials
     // ---------------------------
@@ -101,7 +102,7 @@ console.log(process.env.DB_PASSWORD);
       auth.password,
       auth.transaction_pin
     );
-
+ 
     // ---------------------------
     // Step 4: Create User
     // ---------------------------
@@ -111,7 +112,7 @@ console.log(process.env.DB_PASSWORD);
       password_hash,
       transaction_pin_hash,
     });
-
+ 
     // ---------------------------
     // Step 5: Create Account
     // ---------------------------
@@ -120,17 +121,17 @@ console.log(process.env.DB_PASSWORD);
       account_type: account.account_type,
       initial_deposit: account.initial_deposit,
     });
-
+ 
     // ---------------------------
     // Step 6: Activate User
     // ---------------------------
     await activateUser(newUser.user_id);
-
+ 
     // ---------------------------
     // Step 7: Generate Tokens
     // ---------------------------
     const tokens = generateUserTokens(newUser);
-
+ 
     // ---------------------------
     // Step 8: Create Session
     // ---------------------------
@@ -140,7 +141,7 @@ console.log(process.env.DB_PASSWORD);
       device_info: req.headers["user-agent"] || "Unknown Device",
       ip_address: req.ip,
     });
-
+ 
     // ---------------------------
     // Step 9: Audit Logs
     // ---------------------------
@@ -152,7 +153,7 @@ console.log(process.env.DB_PASSWORD);
         email: newUser.email,
       },
     });
-
+ 
     await logAccountCreation({
       user_id: newUser.user_id,
       account_id: newAccount.account_id,
@@ -162,12 +163,12 @@ console.log(process.env.DB_PASSWORD);
         account_number: newAccount.account_number,
       },
     });
-
+ 
     // ---------------------------
     // Step 10: Commit Transaction
     // ---------------------------
     await transaction.commit();
-
+ 
     // ---------------------------
     // Step 11: Success Response
     // ---------------------------
@@ -191,9 +192,9 @@ console.log(process.env.DB_PASSWORD);
     });
   } catch (error) {
 await transaction.rollback();
-
+ 
 console.error("Registration Error:", error);
-
+ 
 // Sequelize validation failures
 if (error.name === "SequelizeValidationError") {
   return res.status(400).json({
@@ -205,7 +206,7 @@ if (error.name === "SequelizeValidationError") {
     })),
   });
 }
-
+ 
 // Sequelize unique constraint failures
 if (error.name === "SequelizeUniqueConstraintError") {
   return res.status(409).json({
@@ -217,7 +218,7 @@ if (error.name === "SequelizeUniqueConstraintError") {
     })),
   });
 }
-
+ 
 // Foreign key / relational failures
 if (error.name === "SequelizeForeignKeyConstraintError") {
   return res.status(400).json({
@@ -226,7 +227,7 @@ if (error.name === "SequelizeForeignKeyConstraintError") {
     error: error.message,
   });
 }
-
+ 
 // Database connection or query failures
 if (error.name === "SequelizeDatabaseError") {
   return res.status(500).json({
@@ -235,7 +236,7 @@ if (error.name === "SequelizeDatabaseError") {
     error: error.message,
   });
 }
-
+ 
 // Generic fallback
 return res.status(500).json({
   success: false,
@@ -247,7 +248,90 @@ return res.status(500).json({
 });
   }
 }
-
+/**
+ * User Login Controller
+ */
+async function loginUser(req, res) {
+  try {
+    const { email, password } = req.body;
+ 
+    // Step 1: Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+ 
+    // Step 2: Check user
+    const User = require("../../user-service/models/user.model");
+ 
+const existingUser = await User.findOne({
+  where: { email }
+});
+ 
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+ 
+    // Step 3: (TEMP) password check
+    // Replace with real password validation later
+    const isValid = true;
+ 
+    if (!isValid) {
+      await logLogin({
+        user_id: existingUser.user_id,
+        ip_address: req.ip,
+        status: "FAILED",
+      });
+ 
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+ 
+    // Step 4: Generate tokens
+    const tokens = generateUserTokens(existingUser);
+ 
+    // Step 5: Create session
+    await createSession({
+      user_id: existingUser.user_id,
+      refresh_token: tokens.refresh_token,
+      device_info: req.headers["user-agent"] || "Unknown Device",
+      ip_address: req.ip,
+    });
+ 
+    // Step 6: Audit log (SUCCESS)
+    await logLogin({
+      user_id: existingUser.user_id,
+      ip_address: req.ip,
+      status: "success",
+      metadata: {
+        email: existingUser.email,
+      },
+    });
+ 
+    return res.json({
+      success: true,
+      message: "Login successful",
+      tokens,
+    });
+ 
+  } catch (error) {
+    console.error("Login Error:", error);
+ 
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
+  }
+}
 module.exports = {
   registerUser,
+  loginUser
 };
+ 

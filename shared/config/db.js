@@ -27,7 +27,10 @@ const sequelize = new Sequelize(
     },
 
     dialectOptions: {
-      ssl: false, // Set true if using cloud DB with SSL
+      ssl: process.env.DB_SSL === "true" ? {
+      require: true,
+      rejectUnauthorized: false // Common for cloud providers like Supabase/Render
+      } : false,
     },
   }
 );
@@ -48,6 +51,6 @@ async function connectDB() {
 }
 
 module.exports = {
-  sequelize,
-  connectDB,
+  sequelize, // The instance for defining models
+  connectDB, // The function to bootstrap the service
 };
