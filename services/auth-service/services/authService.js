@@ -2,6 +2,7 @@
 
 const Session = require("../models/session.model");
 const bcrypt = require("bcrypt");
+const User = require("../../user-service/models/user.model");
 
 const {
   hashPassword,
@@ -16,6 +17,42 @@ const {
   generateRefreshToken,
 } = require("../../../shared/utils/tokenUtils");
 
+/**
+ * LOGIN USER (ADD THIS FUNCTION)
+ */
+async function loginUser({ email, password, device_info, ip_address }) {
+  // 1. Find user
+  const user = await User.findOne({ where: { email } });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // 2. Compare password (CRITICAL STEP)
+  const isMatch = await bcrypt.compare(password, user.password_hash);
+
+  if (!isMatch) {
+    throw new Error("Invalid password");
+  }
+
+  // 3. Generate tokens
+  const tokens = generateUserTokens(user);
+
+  // 4. Create session
+  await createSession({
+    user_id: user.user_id,
+    refresh_token: tokens.refresh_token,
+    device_info,
+    ip_address,
+  });
+
+  return {
+    success: true,
+    message: "Login successful",
+    user,
+    tokens,
+  };
+}
 /**
  * Hash user credentials
  */
@@ -112,4 +149,5 @@ module.exports = {
   generateUserTokens,
   revokeSession,
   getActiveSession,
+  loginUser
 };

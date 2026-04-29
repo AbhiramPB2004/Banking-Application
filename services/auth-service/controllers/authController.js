@@ -33,6 +33,7 @@ const {
 const {
   logRegistration,
   logAccountCreation,
+  logLogin,
 } = require("../../audit-service/services/auditService");
 
 /**
@@ -247,7 +248,94 @@ return res.status(500).json({
 });
   }
 }
+/**
+ * User Login Controller
+ */
+async function loginUser(req, res) {
+  try {
+    const { email, password } = req.body;
 
+    // Step 1: Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    // Step 2: Check user
+    const User = require("../../user-service/models/user.model");
+
+const existingUser = await User.findOne({
+  where: { email }
+});
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Step 3: (TEMP) password check
+    // Replace with real password validation later
+    const bcrypt = require("bcrypt");
+
+const isValid = await bcrypt.compare(
+  password,
+  existingUser.password_hash
+);
+
+    if (!isValid) {
+      await logLogin({
+        user_id: existingUser.user_id,
+        ip_address: req.ip,
+        status: "failure",
+      });
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Step 4: Generate tokens
+    const tokens = generateUserTokens(existingUser);
+
+    // Step 5: Create session
+    await createSession({
+      user_id: existingUser.user_id,
+      refresh_token: tokens.refresh_token,
+      device_info: req.headers["user-agent"] || "Unknown Device",
+      ip_address: req.ip,
+    });
+
+    // Step 6: Audit log (SUCCESS)
+    await logLogin({
+      user_id: existingUser.user_id,
+      ip_address: req.ip,
+      status: "success",
+      metadata: {
+        email: existingUser.email,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: "Login successful",
+      tokens,
+    });
+
+  } catch (error) {
+    console.error("Login Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
+  }
+}
 module.exports = {
   registerUser,
+  loginUser
 };

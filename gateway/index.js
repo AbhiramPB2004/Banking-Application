@@ -15,13 +15,13 @@ require("../services/audit-service/models/auditLog.model");
 
 // Routes
 const authRoutes = require("./Routes/auth.routes");
-
+const auditRoutes = require("../services/audit-service/routes/audit.routes");
 // Middleware
 app.use(express.json());
 
 // Gateway routes
 app.use("/auth", authRoutes);
-
+app.use("/audit", auditRoutes);
 /**
  * Sync database tables
  * Development use only
