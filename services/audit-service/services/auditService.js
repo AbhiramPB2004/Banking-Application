@@ -86,6 +86,34 @@ async function logLogin({
 }
 
 /**
+ * Log failed login / suspicious activity
+ *
+ * Handles:
+ * - Invalid password attempts
+ * - Unknown user login attempts
+ * - Fraud/security investigations
+ */
+async function logSecurityEvent({
+  user_id = null,
+  action_type,
+  entity_type = "auth",
+  entity_id = null,
+  ip_address = null,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type,
+    entity_type,
+    entity_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
+/**
  * Log account creation event
  */
 async function logAccountCreation({
@@ -112,5 +140,6 @@ module.exports = {
   getAllAuditLogs,
   logRegistration,
   logLogin,
+  logSecurityEvent,
   logAccountCreation,
 };
