@@ -2,11 +2,10 @@
  * /services/credit-card-service/jobs/paymentReminder.js
  * Automated payment notifications for PostgreSQL environment.
  */
-const { Op } = require('sequelize'); // Required for complex SQL queries
-const CreditCard = require('../models/creditCard.model');
-const notificationService = require('../../notification-service/services/notificationService');
-const logger = require('../../shared/utils/logger'); // [cite: 2484]
-
+const { Op } = require('sequelize');
+const CreditCard = require('../models/creditcard.model'); // Fixed name
+const notificationService = require('../../notification-service/services/notificationService'); // This one is correct
+const logger = require('../../../shared/utils/logger'); // Fixed path (../../../)
 const runPaymentReminders = async () => {
     try {
         const today = new Date();

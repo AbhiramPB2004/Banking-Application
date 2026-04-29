@@ -1,37 +1,50 @@
 /**
- * /services/credit-card-service/routes/creditcard.routes.js
+ * /services/credit-card-service/routes/creditCard.routes.js
  * Maps credit card endpoints for PostgreSQL-backed infrastructure.
  */
 
 const express = require('express');
 const router = express.Router();
-const creditCardController = require('../controllers/creditCardController');
+const path = require('path');
+// Fixed controller file name:
+const creditCardController = require(path.join(__dirname, '../controllers/creditcard.controller'));
 
+// (Ensure your authMiddleware path is correct depending on your folder name: middleware vs middlewares)
+const authenticate = require('../../../shared/middleware/authMiddleware');
 /**
- * ROUTE SECURITY PRINCIPLE[cite: 1051]:
- * All routes rely on Gateway JWT injection for identity trust.
+ * ROUTE SECURITY PRINCIPLE:
+ * We apply authentication globally to all routes in this file.
  * The controller will derive req.user.user_id from the verified token.
  */
+router.use(authenticate);
 
-// Apply for credit card: Trigger issuance logic [cite: 2479]
+// --- Application & Discovery ---
+
+// Apply for credit card: Trigger issuance logic
 router.post('/apply', creditCardController.applyNewCard); 
 
-// Retrieve card details: Fetch relational card profile [cite: 2480]
+// Retrieve card details: Fetch relational card profile
 router.get('/:id', creditCardController.getCardDetails); 
 
-// Card purchase simulation: Spend against available credit limit [cite: 2480]
+
+// --- Transactional Operations ---
+
+// Card purchase simulation: Spend against available credit limit
 router.post('/purchase', creditCardController.processCardPurchase);
 
-// Repay outstanding dues: Update balances in PostgreSQL [cite: 2481]
+// Repay outstanding dues: Update balances in PostgreSQL
 router.post('/payment', creditCardController.makeCardPayment); 
 
-// Security freeze: Block card lifecycle state [cite: 2481]
+
+// --- Lifecycle & Security Management ---
+
+// Security freeze: Block card lifecycle state
 router.patch('/block/:id', creditCardController.blockCustomerCard);
 
-// Lifecycle closure: Close card record [cite: 2481]
+// Lifecycle closure: Close card record
 router.patch('/close/:id', creditCardController.closeCard);
 
-// Statement retrieval: Fetch monthly billing reports [cite: 2482]
+// Statement retrieval: Fetch monthly billing reports
 router.get('/statement/:id', creditCardController.generateCardStatement);
 
 module.exports = router;

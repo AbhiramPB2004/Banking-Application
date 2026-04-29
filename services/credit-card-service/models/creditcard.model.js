@@ -3,7 +3,7 @@
  * Defines relational schema for cardholder mapping.
  */
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../../shared/config/db'); // [cite: 1602]
+const { sequelize } = require("../../../shared/config/db");
 
 const CreditCard = sequelize.define('CreditCard', {
     card_id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true }, // 

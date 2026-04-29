@@ -2,8 +2,8 @@
  * /services/credit-card-service/validators/creditCardValidator.js
  * Validates credit card application and payment requests for PostgreSQL.
  */
-const responseFormatter = require('../../shared/utils/responseFormatter'); 
-
+// Fixed path (needs 3 levels up: ../../../):
+const responseFormatter = require('../../../shared/utils/responseFormatter');
 const validateCreditCardInput = (data, type) => {
     const errors = [];
 

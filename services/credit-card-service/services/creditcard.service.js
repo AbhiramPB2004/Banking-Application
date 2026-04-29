@@ -2,9 +2,10 @@
  * /services/credit-card-service/services/creditCardService.js
  * Handles credit card business logic with PostgreSQL.
  */
-const CreditCard = require('../models/creditCard.model');
-const creditScoreCalculator = require('../../shared/utils/creditScoreCalculator'); // [cite: 169]
-
+// Fixed model file name:
+const CreditCard = require('../models/creditcard.model');
+// Fixed path (needs 3 levels up: ../../../):
+const creditScoreCalculator = require('../../../shared/utils/creditScoreCalculator');
 class CreditCardService {
     async applyForCreditCard(data) {
         // Eligibility check using shared utility [cite: 2468]

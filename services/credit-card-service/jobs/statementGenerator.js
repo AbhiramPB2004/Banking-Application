@@ -2,11 +2,10 @@
  * /services/credit-card-service/jobs/statementGenerator.js
  * Updated for PostgreSQL to handle monthly billing summaries.
  */
-const { Op } = require('sequelize'); //
-const CreditCard = require('../models/creditCard.model');
-const Transaction = require('../../transaction-service/models/transaction.model'); // Inter-service dependency [cite: 1708, 2458]
-const logger = require('../../shared/utils/logger'); // [cite: 2484]
-
+const { Op } = require('sequelize');
+const CreditCard = require('../models/creditcard.model'); // Fixed name
+// const Transaction = require('../../transaction-service/models/transaction.model'); // This one is correct
+const logger = require('../../../shared/utils/logger'); // Fixed path (../../../)
 const generateMonthlyStatements = async () => {
     try {
         // 1. Identify active cards for the current billing cycle 

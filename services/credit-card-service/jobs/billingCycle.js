@@ -2,10 +2,9 @@
  * /services/credit-card-service/jobs/billingCycle.js
  * Automated monthly billing generation for PostgreSQL.
  */
-const CreditCard = require('../models/creditCard.model');
-const logger = require('../../shared/utils/logger'); // [cite: 2473]
-const statementGenerator = require('./statementGenerator'); // [cite: 2482]
-
+const CreditCard = require('../models/creditcard.model'); // Fixed name
+const logger = require('../../../shared/utils/logger'); // Fixed path (../../../)
+const statementGenerator = require('./statementGenerator');
 const processMonthlyBilling = async () => {
     try {
         // 1. Fetch all active cards using Sequelize 
