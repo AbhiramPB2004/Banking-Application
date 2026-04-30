@@ -12,15 +12,30 @@ require("../services/user-service/models/user.model");
 require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
 require("../services/audit-service/models/auditLog.model");
+const {
+  authenticateToken,
+} = require("../shared/middlewares/authMiddleware");
 
 // Routes
 const authRoutes = require("./Routes/auth.routes");
-
+const userRoutes = require("./Routes/user.routes");
+const accountRoutes = require(
+  "../services/account-service/routes/account.routes"
+);
+const cookieParser = require("cookie-parser");
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
+
 
 // Gateway routes
 app.use("/auth", authRoutes);
+app.use("/user", authenticateToken , userRoutes);
+app.use(
+  "/accounts",
+  authenticateToken,
+  accountRoutes
+);
 
 /**
  * Sync database tables

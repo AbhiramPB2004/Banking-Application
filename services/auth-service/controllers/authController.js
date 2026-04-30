@@ -114,6 +114,7 @@ async function registerUser(req, res) {
     /**
      * Step 5: Create Account
      */
+    console.log(account)
     const newAccount = await createAccount({
       user_id: newUser.user_id,
       account_type: account.account_type,
