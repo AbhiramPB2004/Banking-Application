@@ -18,10 +18,10 @@ const {
 // Routes
 const authRoutes = require("./Routes/auth.routes");
 const userRoutes = require("./Routes/user.routes");
-
+const cookieParser = require("cookie-parser");
 // Middleware
 app.use(express.json());
-
+app.use(cookieParser());
 // Gateway routes
 app.use("/auth", authRoutes);
 app.use("/user", authenticateToken , userRoutes);
