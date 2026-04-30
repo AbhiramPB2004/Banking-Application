@@ -1,25 +1,22 @@
 const Notification = require("../models/notification.model");
 const { sendEmail } = require("../adapters/emailAdapters");
-const { sendSMS } = require("../adapters/smsAdapters");
 
-exports.sendNotification = async ({
+async function sendNotification({
   user_id,
   type,
   recipient,
   message,
-}) => {
+}) {
   let status = "pending";
 
   try {
     if (type === "email") {
-      await sendEmail(recipient, "Notification", message);
-    } else if (type === "sms") {
-      await sendSMS(recipient, message);
+      await sendEmail(recipient, message);
     }
 
     status = "sent";
   } catch (err) {
-    console.error(err);
+    console.error("Notification Error:", err.message);
     status = "failed";
   }
 
@@ -30,4 +27,8 @@ exports.sendNotification = async ({
     message,
     status,
   });
+}
+
+module.exports = {
+  sendNotification,
 };
