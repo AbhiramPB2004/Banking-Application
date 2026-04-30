@@ -7,7 +7,8 @@ const { validateAccountInput } = require("../validators/accountValidator");
 async function createAccount(req, res) {
   try {
     console.log("BODY:", req.body);
-    const user_id = req.user.user_id; // ALWAYS from JWT
+
+    const user_id = req.user.user_id;
     const data = req.body;
 
     const validation = validateAccountInput(data);
@@ -19,20 +20,27 @@ async function createAccount(req, res) {
       });
     }
 
-    const account = await accountService.createAccount(user_id, data);
+    // ✅ STORE RESULT
+    const account = await accountService.createAccount({
+      user_id,
+      account_type: data.account_type,
+      initial_deposit: data.initial_deposit,
+    });
 
     return res.status(201).json({
       success: true,
       message: "Account created successfully",
       data: account,
     });
+
   } catch (error) {
-  console.error("ERROR STACK:", error.stack); // IMPORTANT
-  return res.status(500).json({
-    success: false,
-    message: error.message,
-  });
-}
+    console.error("ERROR STACK:", error.stack);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 }
 
 /**

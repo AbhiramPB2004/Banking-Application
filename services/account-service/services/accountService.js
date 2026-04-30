@@ -1,12 +1,7 @@
 const Account = require("../models/account.model");
 const { sequelize } = require("../../../shared/config/db");
 
-/**
- * Generate account number (simple version for now)
- */
-function generateAccountNumber() {
-  return "ACC" + Date.now();
-}
+const { generateAccountNumber } = require("../../../shared/utils/accountNumberGenerator");
 
 /**
  * Create new account
@@ -18,7 +13,6 @@ async function createAccount({
   branch_code = "0001",
   ifsc_code = "BANK0001",
 }) {
-  // Generate unique account number
   let account_number;
   let existingAccount;
 
@@ -30,21 +24,21 @@ async function createAccount({
     });
   } while (existingAccount);
 
-  // Create account
-  const newAccount = await Account.create({
+  return await Account.create({
     user_id,
     account_number,
     account_type: account_type.toLowerCase(),
     branch_code,
     ifsc_code,
+
+    // ✅ MATCHES YOUR DB STRUCTURE
     balance: initial_deposit,
     available_balance: initial_deposit,
     min_balance: 1000,
+
     initial_deposit,
     status: "active",
   });
-
-  return newAccount;
 }
 
 /**
@@ -63,11 +57,14 @@ async function getAccountById(account_id, user_id) {
 }
 
 /**
- * Get all user accounts
+ * Get all ACTIVE user accounts
  */
 async function getAccountsByUserId(user_id) {
   return await Account.findAll({
-    where: { user_id },
+    where: {
+      user_id,
+      status: "active", // 🔥 hides closed accounts
+    },
   });
 }
 
@@ -81,24 +78,34 @@ async function updateBalance(account_id, amount, operation) {
     const account = await Account.findByPk(account_id, { transaction });
 
     if (!account) throw new Error("Account not found.");
-    if (account.is_frozen) throw new Error("Account is frozen.");
+
+    if (account.status === "closed") {
+      throw new Error("Account is closed.");
+    }
+
+    if (account.is_frozen) {
+      throw new Error("Account is frozen.");
+    }
+
+    const current = parseFloat(account.balance);
 
     let newBalance =
       operation === "credit"
-        ? parseFloat(account.current_balance) + amount
-        : parseFloat(account.current_balance) - amount;
+        ? current + amount
+        : current - amount;
 
-    if (newBalance < account.minimum_balance) {
+    if (newBalance < parseFloat(account.min_balance)) {
       throw new Error("Minimum balance violation.");
     }
 
-    account.current_balance = newBalance;
+    account.balance = newBalance;
     account.available_balance = newBalance;
 
     await account.save({ transaction });
 
     await transaction.commit();
     return account;
+
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -106,7 +113,7 @@ async function updateBalance(account_id, amount, operation) {
 }
 
 /**
- * Update account status (close account)
+ * Close account
  */
 async function closeAccount(account_id, user_id) {
   const account = await Account.findOne({
@@ -117,7 +124,14 @@ async function closeAccount(account_id, user_id) {
     throw new Error("Account not found or unauthorized.");
   }
 
-  if (account.current_balance > 0) {
+  if (account.status === "closed") {
+    throw new Error("Account already closed.");
+  }
+
+  // 🔥 CRITICAL FIX
+  const balance = parseFloat(account.balance);
+
+  if (balance > 0) {
     throw new Error("Account balance must be zero before closure.");
   }
 
@@ -128,7 +142,7 @@ async function closeAccount(account_id, user_id) {
 }
 
 /**
- * Update account type (optional)
+ * Update account
  */
 async function updateAccount(account_id, user_id, data) {
   const account = await Account.findOne({
@@ -139,13 +153,16 @@ async function updateAccount(account_id, user_id, data) {
     throw new Error("Account not found or unauthorized.");
   }
 
+  if (account.status === "closed") {
+    throw new Error("Cannot update a closed account.");
+  }
+
   if (account.is_frozen) {
     throw new Error("Cannot update a frozen account.");
   }
 
-  // Only allow safe updates
   if (data.account_type) {
-    account.account_type = data.account_type;
+    account.account_type = data.account_type.toLowerCase();
   }
 
   await account.save();
