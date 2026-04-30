@@ -1,3 +1,4 @@
+const notificationService = require("../../notification-service/services/notification.service");
 // /services/auth-service/controllers/authController.js
 
 const { sequelize } = require("../../../shared/config/db");
@@ -169,7 +170,17 @@ console.log(process.env.DB_PASSWORD);
     await transaction.commit();
 
     // ---------------------------
-    // Step 11: Success Response
+// Step 11: Send Notification
+// ---------------------------
+await notificationService.sendNotification({
+  user_id: newUser.user_id,
+  type: "email",
+  recipient: auth.email,
+  message: "Welcome! Your account has been created successfully."
+});
+
+    // ---------------------------
+    // Step 12: Success Response
     // ---------------------------
     return res.status(201).json({
       success: true,
@@ -250,4 +261,85 @@ return res.status(500).json({
 
 module.exports = {
   registerUser,
+  loginUser,
 };
+
+/**
+ * User Login Controller
+ */
+const bcrypt = require("bcrypt");
+const User = require("../../user-service/models/user.model");
+
+async function loginUser(req, res) {
+  try {
+    const { email, password } = req.body;
+
+    // ---------------------------
+    // Step 1: Find User
+    // ---------------------------
+    const user = await User.findOne({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // ---------------------------
+    // Step 2: Verify Password
+    // ---------------------------
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // ---------------------------
+    // Step 3: Generate Tokens
+    // ---------------------------
+    const tokens = generateUserTokens(user);
+
+    // ---------------------------
+    // Step 4: Create Session
+    // ---------------------------
+    await createSession({
+      user_id: user.user_id,
+      refresh_token: tokens.refresh_token,
+      device_info: req.headers["user-agent"] || "Unknown Device",
+      ip_address: req.ip,
+    });
+
+    // ---------------------------
+    // Step 5: Send Notification
+    // ---------------------------
+    await notificationService.sendNotification({
+      user_id: user.user_id,
+      type: "email",
+      recipient: user.email,
+      message: "You have successfully logged in."
+    });
+
+    // ---------------------------
+    // Step 6: Response
+    // ---------------------------
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      tokens,
+    });
+
+  } catch (err) {
+    console.error("Login Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+}

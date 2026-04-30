@@ -9,8 +9,10 @@ function validateUserInput(data) {
   }
 
   // Date of Birth
-  if (!data.dob) {
-    errors.push("Date of birth is required.");
+  const dob = data.date_of_birth || data.dateOfBirth;
+
+if (!dob) {
+  errors.push("Date of birth is required.");
   } else {
     const dob = new Date(data.dob);
     const age = new Date().getFullYear() - dob.getFullYear();

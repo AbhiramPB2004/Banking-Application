@@ -34,7 +34,7 @@ async function createUser(userData) {
     phone: userData.phone,
     password_hash: userData.password_hash,
     transaction_pin_hash: userData.transaction_pin_hash,
-    dob: userData.dob,
+    dob: userData.date_of_birth || userData.dateOfBirth,
     gender: userData.gender,
     address: userData.address,
     aadhaar_number: userData.aadhaar_number,
@@ -88,3 +88,4 @@ module.exports = {
   getUserByEmail,
   activateUser,
 };
+
