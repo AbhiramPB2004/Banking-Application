@@ -1,5 +1,16 @@
+// /services/account-service/models/account.model.js
+
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../../shared/config/db");
+const User = require("../../user-service/models/user.model");
+
+/**
+ * Account Model
+ * Handles:
+ * - Bank account details
+ * - Balance
+ * - Account lifecycle
+ */
 
 const Account = sequelize.define(
   "Account",
@@ -13,10 +24,15 @@ const Account = sequelize.define(
     user_id: {
       type: DataTypes.UUID,
       allowNull: false,
+      references: {
+        model: User,
+        key: "user_id",
+      },
+      onDelete: "CASCADE",
     },
 
     account_number: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(16),
       allowNull: false,
       unique: true,
     },
@@ -27,48 +43,53 @@ const Account = sequelize.define(
     },
 
     branch_code: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(10),
       allowNull: false,
-      defaultValue: "BR001",
+      defaultValue: "0001",
     },
 
     ifsc_code: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: "BANK0001234",
+      defaultValue: "BANK0001",
     },
 
-    current_balance: {
-      type: DataTypes.DECIMAL(12, 2),
+    balance: {
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       defaultValue: 0,
     },
 
     available_balance: {
-      type: DataTypes.DECIMAL(12, 2),
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       defaultValue: 0,
     },
 
-    minimum_balance: {
-      type: DataTypes.DECIMAL(12, 2),
+    min_balance: {
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       defaultValue: 1000,
     },
 
-    status: {
-      type: DataTypes.ENUM("active", "inactive", "closed"),
-      defaultValue: "active",
+    initial_deposit: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
     },
 
-    is_frozen: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+    status: {
+      type: DataTypes.ENUM("pending", "active", "frozen", "closed"),
+      allowNull: false,
+      defaultValue: "pending",
     },
   },
   {
     tableName: "accounts",
+
     timestamps: true,
+
+    createdAt: "created_at",
+    updatedAt: "updated_at",
   }
 );
 

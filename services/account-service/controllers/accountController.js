@@ -62,6 +62,7 @@ async function getAccountById(req, res) {
  */
 async function getUserAccounts(req, res) {
   try {
+    
     const user_id = req.user.user_id;
 
     const accounts = await accountService.getAccountsByUserId(user_id);

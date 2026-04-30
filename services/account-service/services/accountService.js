@@ -11,27 +11,40 @@ function generateAccountNumber() {
 /**
  * Create new account
  */
-async function createAccount(user_id, data) {
-  const transaction = await sequelize.transaction();
+async function createAccount({
+  user_id,
+  account_type,
+  initial_deposit,
+  branch_code = "0001",
+  ifsc_code = "BANK0001",
+}) {
+  // Generate unique account number
+  let account_number;
+  let existingAccount;
 
-  try {
-    const account = await Account.create(
-      {
-        user_id,
-        account_number: generateAccountNumber(),
-        account_type: data.account_type,
-        current_balance: data.initial_deposit,
-        available_balance: data.initial_deposit,
-      },
-      { transaction }
-    );
+  do {
+    account_number = generateAccountNumber("1025", branch_code);
 
-    await transaction.commit();
-    return account;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+    existingAccount = await Account.findOne({
+      where: { account_number },
+    });
+  } while (existingAccount);
+
+  // Create account
+  const newAccount = await Account.create({
+    user_id,
+    account_number,
+    account_type: account_type.toLowerCase(),
+    branch_code,
+    ifsc_code,
+    balance: initial_deposit,
+    available_balance: initial_deposit,
+    min_balance: 1000,
+    initial_deposit,
+    status: "active",
+  });
+
+  return newAccount;
 }
 
 /**

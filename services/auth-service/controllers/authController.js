@@ -1,6 +1,5 @@
 // /services/auth-service/controllers/authController.js
 const bcrypt = require("bcrypt");
-const { sequelize } = require("../../../shared/config/db");
 const {
   validateLoginInput,
 } = require("../validators/loginValidator");
@@ -112,18 +111,21 @@ async function registerUser(req, res) {
       transaction_pin_hash,
     });
 
-    // ---------------------------
-    // Step 5: Create Account
-    // ---------------------------
+    /**
+     * Step 5: Create Account
+     */
+    console.log(account)
     const newAccount = await createAccount({
       user_id: newUser.user_id,
       account_type: account.account_type,
       initial_deposit: account.initial_deposit,
+      branch_code: account.branch_code,
+      ifsc_code: account.ifsc_code,
     });
 
-    // ---------------------------
-    // Step 6: Activate User
-    // ---------------------------
+    /**
+     * Step 6: Activate User
+     */
     await activateUser(newUser.user_id);
 
     /**
