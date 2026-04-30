@@ -6,7 +6,6 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-// Fixed controller file name:
 const creditCardController = require(path.join(__dirname, '../controllers/creditcard.controller'));
 
 // (Ensure your authMiddleware path is correct depending on your folder name: middleware vs middlewares)
@@ -18,17 +17,13 @@ const authenticate = require('../../../shared/middleware/authMiddleware');
  */
 router.use(authenticate);
 
-// --- Application & Discovery ---
-
 // Apply for credit card: Trigger issuance logic
 router.post('/apply', creditCardController.applyNewCard); 
 
 // Retrieve card details: Fetch relational card profile
 router.get('/:id', creditCardController.getCardDetails); 
 
-
 // --- Transactional Operations ---
-
 // Card purchase simulation: Spend against available credit limit
 router.post('/purchase', creditCardController.processCardPurchase);
 
@@ -37,7 +32,6 @@ router.post('/payment', creditCardController.makeCardPayment);
 
 
 // --- Lifecycle & Security Management ---
-
 // Security freeze: Block card lifecycle state
 router.patch('/block/:id', creditCardController.blockCustomerCard);
 

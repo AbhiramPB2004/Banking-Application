@@ -4,26 +4,26 @@
  */
 const express = require('express');
 const cron = require('node-cron');
-const { connectDB, sequelize } = require('../../shared/config/db'); // [cite: 1602, 2019]
-const logger = require('../../shared/utils/logger'); // [cite: 110, 1599]
+const { connectDB, sequelize } = require('../../shared/config/db'); 
+const logger = require('../../shared/utils/logger'); 
 
-const creditCardRoutes = require('./routes/creditcard.routes');
+const creditCardRoutes = require('./routes/creditCard.routes');
 const billingJob = require('./jobs/billingCycle');
 
 const app = express();
-app.use(express.json()); // [cite: 1586]
+app.use(express.json()); 
 
-app.use('/api/credit-cards', creditCardRoutes); // [cite: 1587]
+app.use('/api/credit-cards', creditCardRoutes); 
 
-// Job scheduling for billing [cite: 2482, 2484]
+// Job scheduling for billing 
 cron.schedule('0 0 1 * *', async () => {
-    logger.info("Executing billing cycle [cite: 2482]");
+    logger.info("Executing billing cycle job...");
     await billingJob();
 });
 
 const startService = async () => {
     try {
-        await connectDB(); // [cite: 70]
+        await connectDB(); 
         
         // Synchronize models with PostgreSQL tables 
         await sequelize.sync({ alter: true }); 
@@ -37,4 +37,4 @@ const startService = async () => {
 };
 
 startService();
-module.exports = app; // [cite: 1588]
+module.exports = app; 

@@ -2,8 +2,8 @@
  * /services/credit-card-service/jobs/billingCycle.js
  * Automated monthly billing generation for PostgreSQL.
  */
-const CreditCard = require('../models/creditcard.model'); // Fixed name
-const logger = require('../../../shared/utils/logger'); // Fixed path (../../../)
+const CreditCard = require('../models/creditcard.model');
+const logger = require('../../../shared/utils/logger'); 
 const statementGenerator = require('./statementGenerator');
 const processMonthlyBilling = async () => {
     try {
@@ -24,12 +24,12 @@ const processMonthlyBilling = async () => {
             const newBalance = currentBalance + interestCharged;
 
             /**
-             * 3. Calculate Minimum Due [cite: 2458]
+             * 3. Calculate Minimum Due 
              * Standardized at 5% of the new outstanding balance.
              */
             const newMinimumDue = newBalance * 0.05;
 
-            // 4. Persistence: Update the record in PostgreSQL [cite: 2457, 2466]
+            // 4. Persistence: Update the record in PostgreSQL with the new balance and minimum due
             await card.update({
                 outstanding_balance: newBalance,
                 minimum_due: newMinimumDue,
@@ -37,16 +37,16 @@ const processMonthlyBilling = async () => {
                 billing_cycle_date: card.billing_cycle_date 
             });
 
-            logger.info(`Billing processed for Card ID: ${card.card_id}`); // [cite: 2484]
+            logger.info(`Billing processed for Card ID: ${card.card_id}`); 
 
             /**
-             * 5. Trigger Statement Generation [cite: 2482]
+             * 5. Trigger Statement Generation 
              * Passes the updated card data to create the monthly report.
              */
             await statementGenerator.generateCardStatement(card.card_id); 
         }
     } catch (error) {
-        logger.error(`Monthly billing job failed: ${error.message}`); // [cite: 2484]
+        logger.error(`Monthly billing job failed: ${error.message}`);
     }
 };
 

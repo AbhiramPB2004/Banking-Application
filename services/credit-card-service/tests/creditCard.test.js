@@ -1,32 +1,32 @@
 /**
  * /services/credit-card-service/tests/creditCard.test.js
- * Testing requirements for PostgreSQL-backed infrastructure[cite: 2485].
+ * Testing requirements for PostgreSQL-backed infrastructure.
  */
 const chai = require('chai');
 const expect = chai.expect;
 const request = require('supertest');
 const app = require('../index'); 
-const { sequelize } = require('../../shared/config/db'); //
+const { sequelize } = require('../../shared/config/db'); 
 
 describe('Credit Card Service Integration Tests (PostgreSQL)', () => {
     
     // Ensure database is synced before running tests
     before(async () => {
-        await sequelize.sync({ force: true }); //
+        await sequelize.sync({ force: true }); 
     });
 
     describe('POST /apply', () => {
         it('should fail if KYC is not verified (Eligibility Check)', async () => {
             const res = await request(app)
                 .post('/api/credit-cards/apply')
-                .set('Authorization', 'Bearer valid_jwt_token') // [cite: 552, 1454]
+                .set('Authorization', 'Bearer valid_jwt_token') // Simulate valid token but unverified KYC status
                 .send({
                     requested_limit: 50000,
                     annual_income: 400000,
-                    employment_type: 'salaried' // [cite: 2461]
+                    employment_type: 'salaried' 
                 });
             
-            // Expected failure based on eligibility simulation [cite: 2463]
+            // Expected failure based on eligibility simulation.
             expect(res.status).to.equal(400); 
             expect(res.body.success).to.be.false; 
         });
@@ -42,9 +42,9 @@ describe('Credit Card Service Integration Tests (PostgreSQL)', () => {
                 });
 
             expect(res.status).to.equal(201);
-            expect(res.body.data).to.have.property('card_number'); // [cite: 2468]
-            expect(res.body.data.status).to.equal('active'); // [cite: 2468]
-            expect(parseFloat(res.body.data.credit_limit)).to.equal(100000); // 
+            expect(res.body.data).to.have.property('card_number');
+            expect(res.body.data.status).to.equal('active'); 
+            expect(parseFloat(res.body.data.credit_limit)).to.equal(100000); 
         });
     });
 
@@ -58,7 +58,7 @@ describe('Credit Card Service Integration Tests (PostgreSQL)', () => {
                     amount: 200000 // Higher than limit
                 });
 
-            // Standardized limit validation failure [cite: 2469]
+            // Standardized limit validation failure.
             expect(res.status).to.equal(400); 
             expect(res.body.errors).to.include('Limit validation failed'); 
         });
@@ -66,6 +66,6 @@ describe('Credit Card Service Integration Tests (PostgreSQL)', () => {
 
     // Cleanup after tests
     after(async () => {
-        await sequelize.close(); //
+        await sequelize.close(); 
     });
 });

@@ -5,7 +5,7 @@ const creditCardService = require('../services/creditcard.service');
 const responseFormatter = require('../../../shared/utils/responseFormatter'); 
 const logger = require('../../../shared/utils/logger');
 
-// 🚨 UPDATE 1: Import the User model to fetch real database profiles
+// Import the User model to fetch real database profiles
 const User = require('../../user-service/models/user.model'); 
 
 /**
@@ -13,7 +13,7 @@ const User = require('../../user-service/models/user.model');
  */
 exports.applyNewCard = async (req, res) => {
     try {
-        // 🚨 UPDATE 2: Fetch the actual user profile from the database
+        // Fetch the actual user profile from the database
         const userProfile = await User.findByPk(req.user.user_id);
         
         if (!userProfile) {
@@ -52,7 +52,7 @@ exports.applyNewCard = async (req, res) => {
  */
 exports.getCardDetails = async (req, res) => {
     try {
-        const { cardId } = req.params;
+        const cardId = req.params.id; 
         const result = await creditCardService.getCardById(cardId, req.user.user_id);
         
         return res.status(200).json(responseFormatter.success(result));
@@ -94,7 +94,9 @@ exports.makeCardPayment = async (req, res) => {
  */
 exports.blockCustomerCard = async (req, res) => {
     try {
-        const { cardId } = req.params;
+        //CHANGE THIS LINE: Extract 'id' to match the '/block/:id' route!
+        const cardId = req.params.id; 
+        
         const result = await creditCardService.updateCardStatus(cardId, 'blocked');
         return res.status(200).json(responseFormatter.success(result, "Card has been blocked"));
     } catch (error) {
@@ -102,7 +104,6 @@ exports.blockCustomerCard = async (req, res) => {
     }
 };
 
-// Add this at the end of the file
 module.exports = {
     applyNewCard: exports.applyNewCard,
     getCardDetails: exports.getCardDetails,

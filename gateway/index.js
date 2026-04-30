@@ -8,7 +8,7 @@ require("../services/user-service/models/user.model");
 require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
 require("../services/audit-service/models/auditLog.model");
-require("../services/credit-card-service/models/creditCard.model");
+require("../services/credit-card-service/models/creditcard.model");
 
 // Import Routes
 const authRoutes = require("./Routes/auth.routes");
@@ -20,7 +20,6 @@ app.use(express.json());
 // Mount Routes
 app.use("/auth", authRoutes);
 app.use("/credit-cards", creditCardRoutes); // Fixes: /credit-cards/apply
-app.use("/credit-cards", require("../services/credit-card-service/routes/creditcard.routes"));
 sequelize.sync({ alter: true })
   .then(() => {
     const PORT = process.env.PORT || 5005;

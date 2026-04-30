@@ -3,9 +3,9 @@
  * Automated payment notifications for PostgreSQL environment.
  */
 const { Op } = require('sequelize');
-const CreditCard = require('../models/creditcard.model'); // Fixed name
-const notificationService = require('../../notification-service/services/notificationService'); // This one is correct
-const logger = require('../../../shared/utils/logger'); // Fixed path (../../../)
+const CreditCard = require('../models/creditcard.model'); 
+const notificationService = require('../../notification-service/services/notificationService'); 
+const logger = require('../../../shared/utils/logger'); 
 const runPaymentReminders = async () => {
     try {
         const today = new Date();
@@ -20,7 +20,7 @@ const runPaymentReminders = async () => {
             where: {
                 status: 'active', // 
                 outstanding_balance: {
-                    [Op.gt]: 0 // Only remind if there is money owed [cite: 2458]
+                    [Op.gt]: 0 // Only remind if there is money owed 
                 },
                 due_date: {
                     [Op.lte]: reminderWindow,
@@ -32,18 +32,18 @@ const runPaymentReminders = async () => {
         for (const card of upcomingPayments) {
             /**
              * Trigger inter-service dependency: Notification Service.
-             * This follows the Communication Lifecycle ownership rules. [cite: 2514]
+             * This follows the Communication Lifecycle ownership rules. 
              */
             await notificationService.sendCreditCardReminder({
                 user_id: card.user_id, // Derived from cardholder mapping 
-                amount_due: card.minimum_due, // Minimum due calculations [cite: 2458]
+                amount_due: card.minimum_due, // Minimum due calculations 
                 due_date: card.due_date
             });
             
             logger.info(`Payment reminder sent to user ${card.user_id} for card ${card.card_id}`);
         }
     } catch (error) {
-        logger.error(`Payment reminder job failed: ${error.message}`); // [cite: 1599]
+        logger.error(`Payment reminder job failed: ${error.message}`); 
     }
 };
 
