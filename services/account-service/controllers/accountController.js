@@ -6,7 +6,7 @@ const { validateAccountInput } = require("../validators/accountValidator");
  */
 async function createAccount(req, res) {
   try {
-    console.log("BODY:", req.body);
+    // console.log("BODY:", req.body);
 
     const user_id = req.user.user_id;
     const data = req.body;

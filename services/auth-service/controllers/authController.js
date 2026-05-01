@@ -16,6 +16,8 @@ const {
   validateAccountInput,
 } = require("../../account-service/validators/accountValidator");
 
+const notificationService = require("../../notification-service/services/notification.service");
+
 const {
   checkExistingUser,
   createUser,
@@ -114,7 +116,7 @@ async function registerUser(req, res) {
     /**
      * Step 5: Create Account
      */
-    console.log(account)
+    // console.log(account)
     const newAccount = await createAccount({
       user_id: newUser.user_id,
       account_type: account.account_type,
@@ -194,6 +196,13 @@ async function registerUser(req, res) {
           7 * 24 * 60 * 60 * 1000, // 7 days
       }
     );
+
+    // await notificationService.sendNotification({
+    //   user_id: newUser.user_id, 
+    //   type: "email",
+    //   recipient: auth.email,
+    //   message: "Your bank account has been created successfully.",
+    // });
 
     /**
      * Step 11: Success Response

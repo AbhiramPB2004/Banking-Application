@@ -93,3 +93,34 @@ export const accountAPI = {
       method: 'DELETE',
     }),
 };
+
+// ─── Loan API ─────────────────────────────────────
+
+export const loanAPI = {
+  getMyLoans: () =>
+    request('/loans/user/me'),
+
+  applyForLoan: (data) =>
+    request('/loans/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  makePayment: (data) =>
+    request('/loans/payment', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getLoanById: (id) =>
+    request(`/loans/${id}`),
+
+  getLoanSchedule: (id) =>
+    request(`/loans/schedule/${id}`),
+
+  forecloseLoan: (id, data) =>
+    request(`/loans/foreclose/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};

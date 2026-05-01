@@ -1,0 +1,253 @@
+.loans-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loans-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.loans-header h1 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.btn-apply-loan {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-apply-loan:hover {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.loans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.loan-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.loan-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.loan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.loan-type {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.loan-type i {
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.loan-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.loan-status.active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.loan-status.pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.loan-status.rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.loan-status.closed, .loan-status.foreclosed {
+  background: rgba(107, 114, 128, 0.1);
+  color: #9ca3af;
+}
+
+.loan-status.defaulted {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.5);
+}
+
+.loan-details {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.detail-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.detail-value.highlight {
+  color: #10b981;
+  font-size: 1.25rem;
+}
+
+.loan-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-loan-action {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-pay-emi {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.btn-pay-emi:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.btn-schedule {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.btn-schedule:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.empty-loans {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.empty-loans i {
+  font-size: 4rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  opacity: 0.5;
+}
+
+.empty-loans h3 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.empty-loans p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+/* Schedule Modal Styles */
+.schedule-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.schedule-table th {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.schedule-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.schedule-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.status-badge.upcoming { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+.status-badge.paid { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.status-badge.overdue { background: rgba(239, 68, 68, 0.1); color: #ef4444; }

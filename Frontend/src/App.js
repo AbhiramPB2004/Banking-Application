@@ -12,6 +12,7 @@ import HeroSection from './components/HeroSection';
 import Dashboard from './components/Dashboard';
 import ProfilePage from './components/ProfilePage';
 import AccountsPage from './components/AccountsPage';
+import LoansPage from './components/LoansPage';
 import AdminPanel from './components/AdminPanel';
 import RegisterModal from './components/RegisterModal';
 import LoginModal from './components/LoginModal';
@@ -78,6 +79,14 @@ function AppContent() {
           <ProtectedRoute>
             <div className="app-layout"><div className="main-content animate-fade">
               <AccountsPage />
+            </div></div>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/loans" element={
+          <ProtectedRoute>
+            <div className="app-layout"><div className="main-content animate-fade">
+              <LoansPage />
             </div></div>
           </ProtectedRoute>
         } />

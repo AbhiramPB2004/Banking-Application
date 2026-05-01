@@ -21,6 +21,7 @@ require("../services/user-service/models/user.model");
 require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
 require("../services/audit-service/models/auditLog.model");
+require("../services/loan-service/models/loan.model");
 const {
   authenticateToken,
 } = require("../shared/middlewares/authMiddleware");
@@ -31,6 +32,7 @@ const userRoutes = require("./Routes/user.routes");
 const accountRoutes = require(
   "../services/account-service/routes/account.routes"
 );
+const loanRoutes = require("../services/loan-service/routes/loan.routes");
 const cookieParser = require("cookie-parser");
 // Middleware
 app.use(express.json());
@@ -45,6 +47,15 @@ app.use(
   authenticateToken,
   accountRoutes
 );
+app.use(
+  "/loans",
+  authenticateToken,
+  loanRoutes
+);
+
+// Initialize Loan Service Jobs
+const { initializeJobs } = require("../services/loan-service/index");
+initializeJobs();
 
 /**
  * Sync database tables

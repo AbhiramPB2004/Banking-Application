@@ -16,7 +16,7 @@ const accountController = require("../controllers/accountController");
 //app.use("/accounts", authMiddleware, accountRoutes);
 
 // Routes (correct order)
-// router.post("/", accountController.createAccount);
+router.post("/", accountController.createAccount);
 
 // IMPORTANT ORDER
 router.get("/user/me", accountController.getUserAccounts);
