@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { accountAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
+import CreateAccountModal from './CreateAccountModal';
 import './AccountsPage.css';
 
 const AccountsPage = () => {
@@ -13,6 +14,7 @@ const AccountsPage = () => {
   const [editType, setEditType] = useState(null);
   const [newType, setNewType] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchAccounts = async () => {
     try {
@@ -77,9 +79,14 @@ const AccountsPage = () => {
 
   return (
     <div className="accounts-page">
-      <div className="page-header">
-        <h1>My Accounts</h1>
-        <p>View, manage, and control your bank accounts</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>My Accounts</h1>
+          <p>View, manage, and control your bank accounts</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderRadius: '12px' }}>
+          <i className="fas fa-plus"></i> Open New Account
+        </button>
       </div>
 
       {accounts.length === 0 ? (
@@ -170,6 +177,18 @@ const AccountsPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Create Account Modal */}
+      {showCreateModal && (
+        <CreateAccountModal 
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={(newAcc) => {
+            setShowCreateModal(false);
+            showToast('success', 'Account created successfully!');
+            fetchAccounts();
+          }}
+        />
       )}
     </div>
   );

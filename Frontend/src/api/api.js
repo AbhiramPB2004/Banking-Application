@@ -76,6 +76,12 @@ export const userAPI = {
 // ─── Account API ──────────────────────────────────
 
 export const accountAPI = {
+  createAccount: (data) =>
+    request('/accounts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   getMyAccounts: () =>
     request('/accounts/user/me'),
 
