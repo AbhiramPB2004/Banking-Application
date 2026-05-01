@@ -31,8 +31,8 @@ exports.applyNewCard = async (req, res) => {
             annual_income: userProfile.annual_income, // Real Income from DB
             occupation: userProfile.occupation, // Real Occupation from DB
             existing_liabilities: req.body.existing_liabilities || 0 // Default to 0
-        };
-
+        };console.log(cardData)
+        
         const result = await creditCardService.applyForCreditCard(cardData);
 
         return res.status(201).json(

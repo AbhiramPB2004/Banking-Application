@@ -9,6 +9,7 @@ class CreditCardService {
     async applyForCreditCard(data) {
         // Eligibility check using shared utility
         const eligibility = creditScoreCalculator.calculateCreditScore(data);
+        console.log(eligibility)
         if (!eligibility.eligible) throw new Error("Credit eligibility failed");
 
         // Assign credit limit based on eligibility score

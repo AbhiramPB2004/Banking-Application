@@ -1,40 +1,29 @@
-/**
- * /services/credit-card-service/index.js
- * Service entry point for PostgreSQL environment.
- */
-const express = require('express');
-const cron = require('node-cron');
-const { connectDB, sequelize } = require('../../shared/config/db'); 
-const logger = require('../../shared/utils/logger'); 
+// /services/credit-card-service/index.js
 
-const creditCardRoutes = require('./routes/creditCard.routes');
-const billingJob = require('./jobs/billingCycle');
+const express = require("express");
+
+const router = require(
+  "./routes/creditCard.routes"
+);
 
 const app = express();
-app.use(express.json()); 
 
-app.use('/api/credit-cards', creditCardRoutes); 
+/**
+ * Core Middleware
+ */
+app.use(express.json());
 
-// Job scheduling for billing 
-cron.schedule('0 0 1 * *', async () => {
-    logger.info("Executing billing cycle job...");
-    await billingJob();
-});
+/**
+ * Credit Card Service Routes
+ *
+ * Gateway handles:
+ * - JWT verification
+ * - Security
+ * - Rate limiting
+ * - Audit
+ *
+ * This module focuses only on domain routes.
+ */
+app.use("/", router);
 
-const startService = async () => {
-    try {
-        await connectDB(); 
-        
-        // Synchronize models with PostgreSQL tables 
-        await sequelize.sync({ alter: true }); 
-        
-        app.listen(process.env.PORT || 5005, () => {
-            logger.info(`Service running on port ${process.env.PORT || 5005} `);
-        });
-    } catch (err) {
-        logger.error(`Startup failed: ${err.message} [cite: 122]`);
-    }
-};
-
-startService();
-module.exports = app; 
+module.exports = app;

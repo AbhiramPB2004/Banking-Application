@@ -1,100 +1,98 @@
-//services/auth-service/controllers/authController.js
- 
-const { sequelize } = require("../../../shared/config/db");
- 
+// /services/auth-service/controllers/authController.js
+const bcrypt = require("bcrypt");
+const {
+  validateLoginInput,
+} = require("../validators/loginValidator");
+
 const {
   validateAuthInput,
 } = require("../validators/authValidator");
- 
+
 const {
   validateUserInput,
 } = require("../../user-service/validators/userValidator");
- 
+
 const {
   validateAccountInput,
 } = require("../../account-service/validators/accountValidator");
- 
+
 const {
   checkExistingUser,
   createUser,
   activateUser,
+  getUserByEmail
 } = require("../../user-service/services/userService");
- 
+
 const {
   createAccount,
 } = require("../../account-service/services/accountService");
- 
+
 const {
   prepareUserCredentials,
   generateUserTokens,
   createSession,
 } = require("../services/authService");
- 
+
 const {
   logRegistration,
   logAccountCreation,
   logLogin,
+  logSecurityEvent
 } = require("../../audit-service/services/auditService");
- 
+
 /**
  * User Registration Controller
+ *
+ * Security:
+ * - Access token → HTTP-only cookie
+ * - Refresh token → HTTP-only cookie
+ * - No token exposure in JSON body
  */
 async function registerUser(req, res) {
-console.log(process.env.DB_PASSWORD);
-  const transaction = await sequelize.transaction();
- 
   try {
-    const {
-      auth,
-      user,
-      account,
-    } = req.body;
- 
-    // ---------------------------
-    // Step 1: Validate Inputs
-    // ---------------------------
+    const { auth, user, account } = req.body;
+
+    /**
+     * Step 1: Validate Inputs
+     */
     const authValidation = validateAuthInput(auth);
     const userValidation = validateUserInput(user);
     const accountValidation = validateAccountInput(account);
- 
+
     const validationErrors = [
       ...authValidation.errors,
       ...userValidation.errors,
       ...accountValidation.errors,
     ];
- 
+
     if (validationErrors.length > 0) {
-      await transaction.rollback();
- 
       return res.status(400).json({
         success: false,
         errors: validationErrors,
       });
     }
- 
-    // ---------------------------
-    // Step 2: Check Existing User
-    // ---------------------------
+
+    /**
+     * Step 2: Check Existing User
+     */
     const existingUser = await checkExistingUser({
       email: auth.email,
       phone: auth.phone,
       aadhaar_number: user.aadhaar_number,
       pan_number: user.pan_number,
     });
- 
+
     if (existingUser) {
-      await transaction.rollback();
- 
       return res.status(409).json({
         success: false,
         message:
           "User with provided email, phone, Aadhaar, or PAN already exists.",
       });
     }
- 
-    // ---------------------------
-    // Step 3: Hash Credentials
-    // ---------------------------
+
+    /**
+     * Step 3: Hash Credentials
+     */
     const {
       password_hash,
       transaction_pin_hash,
@@ -102,49 +100,53 @@ console.log(process.env.DB_PASSWORD);
       auth.password,
       auth.transaction_pin
     );
- 
-    // ---------------------------
-    // Step 4: Create User
-    // ---------------------------
+
+    /**
+     * Step 4: Create User
+     */
     const newUser = await createUser({
       ...auth,
       ...user,
       password_hash,
       transaction_pin_hash,
     });
- 
-    // ---------------------------
-    // Step 5: Create Account
-    // ---------------------------
+
+    /**
+     * Step 5: Create Account
+     */
+    console.log(account)
     const newAccount = await createAccount({
       user_id: newUser.user_id,
       account_type: account.account_type,
       initial_deposit: account.initial_deposit,
+      branch_code: account.branch_code,
+      ifsc_code: account.ifsc_code,
     });
- 
-    // ---------------------------
-    // Step 6: Activate User
-    // ---------------------------
+
+    /**
+     * Step 6: Activate User
+     */
     await activateUser(newUser.user_id);
- 
-    // ---------------------------
-    // Step 7: Generate Tokens
-    // ---------------------------
+
+    /**
+     * Step 7: Generate Tokens
+     */
     const tokens = generateUserTokens(newUser);
- 
-    // ---------------------------
-    // Step 8: Create Session
-    // ---------------------------
+
+    /**
+     * Step 8: Create Session
+     */
     await createSession({
       user_id: newUser.user_id,
       refresh_token: tokens.refresh_token,
-      device_info: req.headers["user-agent"] || "Unknown Device",
+      device_info:
+        req.headers["user-agent"] || "Unknown Device",
       ip_address: req.ip,
     });
- 
-    // ---------------------------
-    // Step 9: Audit Logs
-    // ---------------------------
+
+    /**
+     * Step 9: Audit Logs
+     */
     await logRegistration({
       user_id: newUser.user_id,
       ip_address: req.ip,
@@ -153,7 +155,7 @@ console.log(process.env.DB_PASSWORD);
         email: newUser.email,
       },
     });
- 
+
     await logAccountCreation({
       user_id: newUser.user_id,
       account_id: newAccount.account_id,
@@ -163,15 +165,39 @@ console.log(process.env.DB_PASSWORD);
         account_number: newAccount.account_number,
       },
     });
- 
-    // ---------------------------
-    // Step 10: Commit Transaction
-    // ---------------------------
-    await transaction.commit();
- 
-    // ---------------------------
-    // Step 11: Success Response
-    // ---------------------------
+
+    /**
+     * Step 10: Set Secure Cookies
+     */
+    const cookieOptions = {
+      httpOnly: true,
+      secure:
+        process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+    };
+
+    res.cookie(
+      "access_token",
+      tokens.access_token,
+      {
+        ...cookieOptions,
+        maxAge: 15 * 60 * 1000, // 15 mins
+      }
+    );
+
+    res.cookie(
+      "refresh_token",
+      tokens.refresh_token,
+      {
+        ...cookieOptions,
+        maxAge:
+          7 * 24 * 60 * 60 * 1000, // 7 days
+      }
+    );
+
+    /**
+     * Step 11: Success Response
+     */
     return res.status(201).json({
       success: true,
       message: "User registered successfully.",
@@ -184,154 +210,258 @@ console.log(process.env.DB_PASSWORD);
       },
       account: {
         account_id: newAccount.account_id,
-        account_number: newAccount.account_number,
-        account_type: newAccount.account_type,
+        account_number:
+          newAccount.account_number,
+        account_type:
+          newAccount.account_type,
         balance: newAccount.balance,
       },
-      tokens,
     });
   } catch (error) {
-await transaction.rollback();
- 
-console.error("Registration Error:", error);
- 
-// Sequelize validation failures
-if (error.name === "SequelizeValidationError") {
-  return res.status(400).json({
-    success: false,
-    message: "Validation failed.",
-    errors: error.errors.map((err) => ({
-      field: err.path,
-      message: err.message,
-    })),
-  });
-}
- 
-// Sequelize unique constraint failures
-if (error.name === "SequelizeUniqueConstraintError") {
-  return res.status(409).json({
-    success: false,
-    message: "Duplicate field detected.",
-    errors: error.errors.map((err) => ({
-      field: err.path,
-      message: `${err.path} already exists.`,
-    })),
-  });
-}
- 
-// Foreign key / relational failures
-if (error.name === "SequelizeForeignKeyConstraintError") {
-  return res.status(400).json({
-    success: false,
-    message: "Related resource validation failed.",
-    error: error.message,
-  });
-}
- 
-// Database connection or query failures
-if (error.name === "SequelizeDatabaseError") {
-  return res.status(500).json({
-    success: false,
-    message: "Database operation failed.",
-    error: error.message,
-  });
-}
- 
-// Generic fallback
-return res.status(500).json({
-  success: false,
-  message: "Internal server error during registration.",
-  error:
-    process.env.NODE_ENV === "development"
-      ? error.message
-      : undefined,
-});
+    console.error(
+      "Registration Error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Internal server error during registration.",
+      error:
+        process.env.NODE_ENV ===
+        "development"
+          ? error.message
+          : undefined,
+    });
   }
 }
+
 /**
  * User Login Controller
+ *
+ * Handles:
+ * - User authentication
+ * - Password verification
+ * - JWT generation
+ * - Session replacement
+ * - Secure cookie token delivery
+ * - Audit logging
  */
 async function loginUser(req, res) {
   try {
     const { email, password } = req.body;
- 
-    // Step 1: Validate input
-    if (!email || !password) {
+
+    /**
+     * Step 1: Validate Input
+     */
+    const validation =
+      validateLoginInput({
+        email,
+        password,
+      });
+
+    if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required",
+        errors: validation.errors,
       });
     }
- 
-    // Step 2: Check user
-    const User = require("../../user-service/models/user.model");
- 
-const existingUser = await User.findOne({
-  where: { email }
-});
- 
-    if (!existingUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
- 
-    // Step 3: (TEMP) password check
-    // Replace with real password validation later
-    const isValid = true;
- 
-    if (!isValid) {
-      await logLogin({
-        user_id: existingUser.user_id,
+
+    /**
+     * Step 2: Find User
+     */
+    const user =
+      await getUserByEmail(email);
+
+    if (!user) {
+      await logSecurityEvent({
+        action_type:
+          "login_failed",
         ip_address: req.ip,
-        status: "FAILED",
+        status: "failure",
+        metadata: {
+          email,
+          reason:
+            "User not found",
+        },
       });
- 
+
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message:
+          "Invalid credentials.",
       });
     }
- 
-    // Step 4: Generate tokens
-    const tokens = generateUserTokens(existingUser);
- 
-    // Step 5: Create session
+
+    /**
+     * Step 3: Verify Password
+     */
+    const passwordMatch =
+      await bcrypt.compare(
+        password,
+        user.password_hash
+      );
+
+    if (!passwordMatch) {
+      await logSecurityEvent({
+        user_id:
+          user.user_id,
+        action_type:
+          "login_failed",
+        entity_id:
+          user.user_id,
+        ip_address:
+          req.ip,
+        status:
+          "failure",
+        metadata: {
+          reason:
+            "Incorrect password",
+        },
+      });
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid credentials.",
+      });
+    }
+
+    /**
+     * Step 4: Verify Account Status
+     */
+    if (
+      user.status !==
+      "active"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "User account is not active.",
+      });
+    }
+
+    /**
+     * Step 5: Generate JWT Tokens
+     */
+    const tokens =
+      generateUserTokens(
+        user
+      );
+
+    /**
+     * Step 6: Replace Previous Session
+     */
     await createSession({
-      user_id: existingUser.user_id,
-      refresh_token: tokens.refresh_token,
-      device_info: req.headers["user-agent"] || "Unknown Device",
-      ip_address: req.ip,
+      user_id:
+        user.user_id,
+      refresh_token:
+        tokens.refresh_token,
+      device_info:
+        req.headers[
+          "user-agent"
+        ] ||
+        "Unknown Device",
+      ip_address:
+        req.ip,
     });
- 
-    // Step 6: Audit log (SUCCESS)
+
+    /**
+     * Step 7: Set Secure Cookies
+     */
+    const cookieOptions = {
+      httpOnly: true,
+      secure:
+        process.env
+          .NODE_ENV ===
+        "production",
+      sameSite:
+        "Strict",
+    };
+
+    res.cookie(
+      "access_token",
+      tokens.access_token,
+      {
+        ...cookieOptions,
+        maxAge:
+          15 *
+          60 *
+          1000,
+      }
+    );
+
+    res.cookie(
+      "refresh_token",
+      tokens.refresh_token,
+      {
+        ...cookieOptions,
+        maxAge:
+          7 *
+          24 *
+          60 *
+          60 *
+          1000,
+      }
+    );
+
+    /**
+     * Step 8: Audit Success
+     */
     await logLogin({
-      user_id: existingUser.user_id,
-      ip_address: req.ip,
-      status: "success",
+      user_id:
+        user.user_id,
+      ip_address:
+        req.ip,
+      status:
+        "success",
       metadata: {
-        email: existingUser.email,
+        email:
+          user.email,
       },
     });
- 
-    return res.json({
+
+    /**
+     * Step 9: Success Response
+     */
+    return res.status(200).json({
       success: true,
-      message: "Login successful",
-      tokens,
+      message:
+        "Login successful.",
+      user: {
+        user_id:
+          user.user_id,
+        full_name:
+          user.full_name,
+        email:
+          user.email,
+        role:
+          user.role,
+        status:
+          user.status,
+      },
     });
- 
   } catch (error) {
-    console.error("Login Error:", error);
- 
+    console.error(
+      "Login Error:",
+      error
+    );
+
     return res.status(500).json({
       success: false,
-      message: "Login failed",
+      message:
+        "Internal server error during login.",
+      error:
+        process.env
+          .NODE_ENV ===
+        "development"
+          ? error.message
+          : undefined,
     });
   }
 }
+
 module.exports = {
   registerUser,
   loginUser
 };
- 

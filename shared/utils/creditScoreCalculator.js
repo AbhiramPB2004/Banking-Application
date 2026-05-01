@@ -29,16 +29,16 @@ const calculateCreditScore = (userData) => {
 
     // 5. Occupation Stability Factor [cite: 797, 861]
     const stableJobs = ['salaried', 'professional'];
-    if (stableJobs.includes(occupation?.toLowerCase())) {
-        baseScore += 50;
-    }
+    // if (stableJobs.includes(occupation?.toLowerCase())) {
+    //     baseScore += 50;
+    // }
 
     // Determine Risk Category 
     let category = 'HIGH_RISK';
     if (baseScore >= 750) category = 'EXCELLENT';
     else if (baseScore >= 650) category = 'GOOD';
     else if (baseScore >= 500) category = 'AVERAGE';
-
+    
     return {
         score: Math.min(900, Math.max(300, baseScore)),
         category: category,

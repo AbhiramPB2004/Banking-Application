@@ -1,35 +1,92 @@
-/**
- * /shared/middleware/authMiddleware.js
- * Centralized JWT verification for all microservices.
- */
-const jwt = require('jsonwebtoken');
-const responseFormatter = require('../utils/responseFormatter');
+// /shared/middlewares/securityMiddleware.js
 
-const authenticate = (req, res, next) => {
-    // 1. Get token from header (Format: Bearer <token>)
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+const jwt = require("jsonwebtoken");
+
+/**
+ * Centralized JWT Authentication Middleware
+ *
+ * Security Model:
+ * - JWT sourced ONLY from HTTP-only cookies
+ * - No Authorization header dependency
+ * - Gateway-trusted identity
+ * - req.user.user_id = trusted source
+ */
+
+function authenticateToken(
+  req,
+  res,
+  next
+) {
+  try {
+    /**
+     * Extract access token from secure cookies
+     */
+    const token =
+      req.cookies?.access_token;
 
     if (!token) {
-        return res.status(401).json(
-            responseFormatter.error("Access denied. No token provided.")
-        );
+      return res.status(401).json({
+        success: false,
+        message:
+          "Authentication token required.",
+      });
     }
 
-    try {
-        // 2. Verify token using your secret key from .env
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_super_secret_key');
-        
-        // 3. Inject user data into the request object
-        // This makes req.user.user_id available in your controllers
-        req.user = decoded; 
-        
-        next(); // Move to the next function (the controller)
-    } catch (error) {
-        return res.status(403).json(
-            responseFormatter.error("Invalid or expired token.")
-        );
-    }
+    /**
+     * Verify JWT
+     */
+    const decoded =
+      jwt.verify(
+        token,
+        process.env.JWT_SECRET
+      );
+
+    /**
+     * Attach trusted user context
+     */
+    console.log(decoded);
+    req.user = {
+      user_id:
+        decoded.user_id,
+      email:
+        decoded.email,
+      role:
+        decoded.role,
+    };
+
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message:
+        "Invalid or expired token.",
+    });
+  }
+}
+
+/**
+ * Admin Authorization Middleware
+ */
+function requireAdmin(
+  req,
+  res,
+  next
+) {
+  if (
+    !req.user ||
+    req.user.role !== "admin"
+  ) {
+    return res.status(403).json({
+      success: false,
+      message:
+        "Admin access required.",
+    });
+  }
+
+  next();
+}
+
+module.exports = {
+  authenticateToken,
+  requireAdmin,
 };
-
-module.exports = authenticate;

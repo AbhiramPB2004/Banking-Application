@@ -1,44 +1,83 @@
 /**
  * /services/credit-card-service/routes/creditCard.routes.js
- * Maps credit card endpoints for PostgreSQL-backed infrastructure.
+ *
+ * Credit Card Service Routes
+ *
+ * Security:
+ * - JWT enforced at Gateway
+ * - req.user.user_id trusted
+ * - Controllers handle ownership/admin checks
  */
 
-const express = require('express');
+const express = require("express");
+
 const router = express.Router();
-const path = require('path');
-const creditCardController = require(path.join(__dirname, '../controllers/creditcard.controller'));
 
-// (Ensure your authMiddleware path is correct depending on your folder name: middleware vs middlewares)
-const authenticate = require('../../../shared/middleware/authMiddleware');
+const creditCardController = require(
+  "../controllers/creditcard.controller"
+);
+
 /**
- * ROUTE SECURITY PRINCIPLE:
- * We apply authentication globally to all routes in this file.
- * The controller will derive req.user.user_id from the verified token.
+ * Apply for new credit card
+ * POST /credit-cards/apply
  */
-router.use(authenticate);
+router.post(
+  "/apply",
+  creditCardController.applyNewCard
+);
 
-// Apply for credit card: Trigger issuance logic
-router.post('/apply', creditCardController.applyNewCard); 
+/**
+ * Retrieve customer card details
+ * GET /credit-cards/:id
+ */
+router.get(
+  "/:id",
+  creditCardController.getCardDetails
+);
 
-// Retrieve card details: Fetch relational card profile
-router.get('/:id', creditCardController.getCardDetails); 
+/**
+ * Process card purchase
+ * POST /credit-cards/purchase
+ */
+router.post(
+  "/purchase",
+  creditCardController.processCardPurchase
+);
 
-// --- Transactional Operations ---
-// Card purchase simulation: Spend against available credit limit
-router.post('/purchase', creditCardController.processCardPurchase);
+/**
+ * Make credit card payment
+ * POST /credit-cards/payment
+ */
+router.post(
+  "/payment",
+  creditCardController.makeCardPayment
+);
 
-// Repay outstanding dues: Update balances in PostgreSQL
-router.post('/payment', creditCardController.makeCardPayment); 
+/**
+ * Block card
+ * PATCH /credit-cards/block/:id
+ */
+router.patch(
+  "/block/:id",
+  creditCardController.blockCustomerCard
+);
 
+/**
+ * Close card
+ * PATCH /credit-cards/close/:id
+ */
+router.patch(
+  "/close/:id",
+  creditCardController.closeCard
+);
 
-// --- Lifecycle & Security Management ---
-// Security freeze: Block card lifecycle state
-router.patch('/block/:id', creditCardController.blockCustomerCard);
-
-// Lifecycle closure: Close card record
-router.patch('/close/:id', creditCardController.closeCard);
-
-// Statement retrieval: Fetch monthly billing reports
-router.get('/statement/:id', creditCardController.generateCardStatement);
+/**
+ * Generate statement
+ * GET /credit-cards/statement/:id
+ */
+router.get(
+  "/statement/:id",
+  creditCardController.generateCardStatement
+);
 
 module.exports = router;
