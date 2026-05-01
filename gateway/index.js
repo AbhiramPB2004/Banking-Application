@@ -3,7 +3,16 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 const app = express();
+
+// CORS — allow frontend origin with credentials (cookies)
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 const { sequelize } = require("../shared/config/db");
 
