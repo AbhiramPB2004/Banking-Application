@@ -25,6 +25,9 @@ require("../services/loan-service/models/loan.model");
 const {
   authenticateToken,
 } = require("../shared/middlewares/authMiddleware");
+const creditCardRoutes = require(
+  "../services/credit-card-service/routes/creditCard.routes"
+);
 
 // Routes
 const authRoutes = require("./Routes/auth.routes");
@@ -51,6 +54,12 @@ app.use(
   "/loans",
   authenticateToken,
   loanRoutes
+);
+
+app.use(
+  "/credit-cards",
+  authenticateToken,
+  creditCardRoutes
 );
 
 // Initialize Loan Service Jobs

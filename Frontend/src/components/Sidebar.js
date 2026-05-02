@@ -9,6 +9,7 @@ const Sidebar = () => {
   const navItems = [
     { path: '/dashboard', icon: 'fa-th-large', label: 'Dashboard' },
     { path: '/accounts', icon: 'fa-university', label: 'Accounts' },
+    { path: '/credit-cards', icon: 'fa-credit-card', label: 'Credit Cards' },
     { path: '/loans', icon: 'fa-hand-holding-usd', label: 'Loans' },
     { path: '/profile', icon: 'fa-user-circle', label: 'Profile' },
   ];

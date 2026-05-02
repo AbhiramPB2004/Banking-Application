@@ -130,3 +130,33 @@ export const loanAPI = {
       body: JSON.stringify(data),
     }),
 };
+
+// ─── Credit Card API ─────────────────────────────────
+
+export const creditCardAPI = {
+  getMyCards: () =>
+    request('/credit-cards/user/me'),
+
+  applyForCard: (data) =>
+    request('/credit-cards/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  processPurchase: (data) =>
+    request('/credit-cards/purchase', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  makePayment: (data) =>
+    request('/credit-cards/payment', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  blockCard: (id) =>
+    request(`/credit-cards/block/${id}`, {
+      method: 'PATCH',
+    }),
+};
