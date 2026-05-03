@@ -5,8 +5,9 @@ const creditCardService = require('../services/creditcard.service');
 const responseFormatter = require('../../../shared/utils/responseFormatter'); 
 const logger = require('../../../shared/utils/logger');
 
-// Import the User model to fetch real database profiles
+// Import models to fetch real database profiles
 const User = require('../../user-service/models/user.model'); 
+const Account = require('../../account-service/models/account.model'); 
 
 /**
  * Apply for a new Credit Card
@@ -20,6 +21,12 @@ exports.applyNewCard = async (req, res) => {
             return res.status(404).json(responseFormatter.error("User not found"));
         }
 
+        // Fetch user's existing bank account to link with the card
+        const userAccount = await Account.findOne({ 
+            where: { user_id: req.user.user_id },
+            order: [['created_at', 'ASC']] // Get the first/primary account
+        });
+
         /**
          * Identity trust enforcement: 
          * Merge the trusted database facts with the application body.
@@ -27,11 +34,12 @@ exports.applyNewCard = async (req, res) => {
         const cardData = {
             ...req.body,
             user_id: req.user.user_id, // Security: derive identity from token, not body
+            source_account_id: userAccount ? userAccount.account_id : undefined, // Automated link
             kyc_status: userProfile.kyc_status, // Real KYC from DB
             annual_income: userProfile.annual_income, // Real Income from DB
             occupation: userProfile.occupation, // Real Occupation from DB
             existing_liabilities: req.body.existing_liabilities || 0 // Default to 0
-        };console.log(cardData)
+        };
         
         const result = await creditCardService.applyForCreditCard(cardData);
 
@@ -82,7 +90,10 @@ exports.processCardPurchase = async (req, res) => {
  */
 exports.makeCardPayment = async (req, res) => {
     try {
-        const result = await creditCardService.repayBalance(req.body);
+        const result = await creditCardService.repayBalance({
+            ...req.body,
+            user_id: req.user.user_id
+        });
         return res.status(200).json(responseFormatter.success(result, "Payment successful"));
     } catch (error) {
         return res.status(400).json(responseFormatter.error(error.message));

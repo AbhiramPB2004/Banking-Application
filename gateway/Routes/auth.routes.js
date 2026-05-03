@@ -9,4 +9,4 @@ const authService = require("../../services/auth-service/index");
 // Mount auth service
 router.use("/", authService);
 
-module.exports = router;
+module.exports = router; 

@@ -3,7 +3,7 @@
  * Handles credit card business logic with PostgreSQL.
  */
 const CreditCard = require('../models/creditcard.model');
-const creditScoreCalculator = require('../../../shared/utils/creditScoreCalculator'); 
+const creditScoreCalculator = require('../../../shared/utils/creditScoreCalculator');
 
 class CreditCardService {
     async applyForCreditCard(data) {
@@ -16,7 +16,7 @@ class CreditCardService {
         return await CreditCard.create({
             user_id: data.user_id,
             linked_account_id: data.source_account_id || '00000000-0000-0000-0000-000000000000', // Fallback if missing
-            card_number: this.generateCardNumber(), 
+            card_number: this.generateCardNumber(),
             card_type: 'VISA_PREMIUM',
             credit_limit: data.requested_limit,
             available_limit: data.requested_limit,
@@ -26,7 +26,7 @@ class CreditCardService {
 
     generateCardNumber() {
         // Banking structure compliance
-        return Array.from({length: 16}, () => Math.floor(Math.random() * 10)).join('');
+        return Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
     }
 
     // Handles purchases and deducts from the available limit
@@ -70,8 +70,8 @@ class CreditCardService {
     // Retrieves card details safely
     async getCardById(card_id, user_id) {
         // Fetch the card and verify the user actually owns it
-        const card = await CreditCard.findOne({ 
-            where: { card_id, user_id } 
+        const card = await CreditCard.findOne({
+            where: { card_id, user_id }
         });
 
         if (!card) {
@@ -93,15 +93,15 @@ class CreditCardService {
 
     // Make a Payment
     async repayBalance(data) {
-        const { card_id, payment_amount } = data; 
+        const { card_id, user_id, payment_amount } = data;
 
-        const card = await CreditCard.findOne({ where: { card_id } });
+        const card = await CreditCard.findOne({ where: { card_id, user_id } });
         if (!card) {
-            throw new Error("Credit card not found");
+            throw new Error("Credit card not found or unauthorized access");
         }
 
         const payment = parseFloat(payment_amount);
-        
+
         // Math: Reduce balance, restore available limit
         card.outstanding_balance = parseFloat(card.outstanding_balance) - payment;
         card.available_limit = parseFloat(card.available_limit) + payment;
@@ -116,10 +116,10 @@ class CreditCardService {
         };
     }
 
-    // 🚨 MISSING FUNCTION ADDED: Block Customer Card
+    // MISSING FUNCTION ADDED: Block Customer Card
     async updateCardStatus(card_id, status) {
         const card = await CreditCard.findOne({ where: { card_id } });
-        
+
         if (!card) {
             throw new Error("Credit card not found");
         }

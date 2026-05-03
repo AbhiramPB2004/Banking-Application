@@ -27,6 +27,15 @@ router.post(
 );
 
 /**
+ * Generate statement
+ * GET /credit-cards/statement/:id
+ */
+router.get(
+  "/statement/:id",
+  creditCardController.generateCardStatement
+);
+
+/**
  * Retrieve customer card details
  * GET /credit-cards/:id
  */
@@ -70,14 +79,4 @@ router.patch(
   "/close/:id",
   creditCardController.closeCard
 );
-
-/**
- * Generate statement
- * GET /credit-cards/statement/:id
- */
-router.get(
-  "/statement/:id",
-  creditCardController.generateCardStatement
-);
-
 module.exports = router;
