@@ -47,12 +47,7 @@ async function createAccountController(req, res) {
     // ---------------------------
     // Step 4: Send Notification
     // ---------------------------
-    await notificationService.sendNotification({
-      user_id,
-      type: "email",
-      recipient: user.email,
-      message: "Your bank account has been created successfully.",
-    });
+    await notificationService.notifyRegister(user);
 
     // ---------------------------
     // Step 5: Commit Transaction

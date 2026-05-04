@@ -1,3 +1,5 @@
+// /services/transaction-service/controllers/transaction.controller.js
+
 const { sequelize } = require("../../../shared/config/db");
 
 const {
@@ -17,7 +19,7 @@ async function transferController(req, res) {
     const { sender_account, receiver_account, amount } = req.body;
 
     // ---------------------------
-    // Step 0: Basic Validation
+    // Step 0: Validation
     // ---------------------------
     if (!sender_account || !receiver_account || !amount) {
       await transaction.rollback();
@@ -34,7 +36,7 @@ async function transferController(req, res) {
       sender_account,
       receiver_account,
       amount,
-      transaction, // ✅ IMPORTANT
+      transaction, // important
     });
 
     const { sender, receiver } = result;
@@ -45,7 +47,6 @@ async function transferController(req, res) {
     const senderUser = await User.findByPk(sender.user_id);
     const receiverUser = await User.findByPk(receiver.user_id);
 
-    // ✅ DEBUG FIRST
     console.log("Sender User:", senderUser);
     console.log("Receiver User:", receiverUser);
 
@@ -57,24 +58,14 @@ async function transferController(req, res) {
     }
 
     // ---------------------------
-    // Step 4: Debit Notification
+    // Step 4: Debit Notification (NEW FUNCTION)
     // ---------------------------
-    await notificationService.sendNotification({
-      user_id: sender.user_id,
-      type: "email",
-      recipient: senderUser.email,
-      message: `${amount} INR debited from your account.`,
-    });
+    await notificationService.notifyDebit(senderUser, amount);
 
     // ---------------------------
-    // Step 5: Credit Notification
+    // Step 5: Credit Notification (NEW FUNCTION)
     // ---------------------------
-    await notificationService.sendNotification({
-      user_id: receiver.user_id,
-      type: "email",
-      recipient: receiverUser.email,
-      message: `${amount} INR credited to your account.`,
-    });
+    await notificationService.notifyCredit(receiverUser, amount);
 
     // ---------------------------
     // Step 6: Commit Transaction
