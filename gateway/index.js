@@ -22,6 +22,11 @@ require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
 require("../services/audit-service/models/auditLog.model");
 require("../services/loan-service/models/loan.model");
+require("../services/investment-service/models/investmentProduct.model");
+require("../services/investment-service/models/portfolio.model");
+require("../services/investment-service/models/holding.model");
+require("../services/investment-service/models/investmentTransaction.model");
+require("../services/investment-service/models/navHistory.model");
 const {
   authenticateToken,
 } = require("../shared/middlewares/authMiddleware");
@@ -36,6 +41,9 @@ const accountRoutes = require(
   "../services/account-service/routes/account.routes"
 );
 const loanRoutes = require("../services/loan-service/routes/loan.routes");
+const investmentRoutes = require(
+  "../services/investment-service/routes/investment.routes"
+);
 const cookieParser = require("cookie-parser");
 // Middleware
 app.use(express.json());
@@ -62,9 +70,21 @@ app.use(
   creditCardRoutes
 );
 
+app.use(
+  "/investments",
+  authenticateToken,
+  investmentRoutes
+);
+
 // Initialize Loan Service Jobs
 const { initializeJobs } = require("../services/loan-service/index");
 initializeJobs();
+
+// Initialize Investment Service Jobs
+const {
+  initializeJobs: initializeInvestmentJobs,
+} = require("../services/investment-service/index");
+initializeInvestmentJobs();
 
 /**
  * Sync database tables

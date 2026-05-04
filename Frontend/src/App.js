@@ -14,6 +14,7 @@ import ProfilePage from './components/ProfilePage';
 import AccountsPage from './components/AccountsPage';
 import CreditCardsPage from './components/CreditCardsPage';
 import LoansPage from './components/LoansPage';
+import InvestmentsPage from './components/InvestmentsPage';
 import AdminPanel from './components/AdminPanel';
 import RegisterModal from './components/RegisterModal';
 import LoginModal from './components/LoginModal';
@@ -96,6 +97,14 @@ function AppContent() {
           <ProtectedRoute>
             <div className="app-layout"><div className="main-content animate-fade">
               <LoansPage />
+            </div></div>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/investments" element={
+          <ProtectedRoute>
+            <div className="app-layout"><div className="main-content animate-fade">
+              <InvestmentsPage />
             </div></div>
           </ProtectedRoute>
         } />

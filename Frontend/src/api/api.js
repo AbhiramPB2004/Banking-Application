@@ -160,3 +160,34 @@ export const creditCardAPI = {
       method: 'PATCH',
     }),
 };
+
+// Investment API
+
+export const investmentAPI = {
+  getMarketOverview: () =>
+    request('/investments/market'),
+
+  getProducts: () =>
+    request('/investments/products'),
+
+  getProductNavHistory: (id) =>
+    request(`/investments/products/${id}/nav-history`),
+
+  getPortfolio: () =>
+    request('/investments/portfolio/me'),
+
+  getStatement: () =>
+    request('/investments/statement/me'),
+
+  buyInvestment: (data) =>
+    request('/investments/buy', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  sellInvestment: (data) =>
+    request('/investments/sell', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
