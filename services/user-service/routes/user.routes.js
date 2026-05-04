@@ -18,6 +18,8 @@ router.put("/me", userController.updateUserProfile);
 /* Submit / update own KYC */
 router.patch("/kyc", userController.updateKYC);
 
+router.patch("/kyc/verify", userController.verifyKYC);
+
 
 /**
  * ADMIN ROUTES
