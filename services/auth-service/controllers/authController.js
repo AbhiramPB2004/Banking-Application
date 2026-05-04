@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const {
   validateLoginInput,
 } = require("../validators/loginValidator");
-
+// const notificationService = require("../../notification-service/services/notification.service");
 const {
   validateAuthInput,
 } = require("../validators/authValidator");
@@ -196,7 +196,7 @@ async function registerUser(req, res) {
           7 * 24 * 60 * 60 * 1000, // 7 days
       }
     );
-
+    await notificationService.notifyRegister(newUser);
     // await notificationService.sendNotification({
     //   user_id: newUser.user_id, 
     //   type: "email",
@@ -413,7 +413,7 @@ async function loginUser(req, res) {
           1000,
       }
     );
-
+    await notificationService.notifyLogin(user, req.ip);
     /**
      * Step 8: Audit Success
      */

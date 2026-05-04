@@ -1,24 +1,35 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-exports.sendEmail = async (to, subject, text) => {
-  console.log("📤 Trying to send email to:", to);
+const sendEmail = async (to, subject, message) => {
+  try {
+    console.log("📤 Sending email to:", to);
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to,
-    subject,
-    text,
-  };
+    const info = await transporter.sendMail({
+      from: `"Banking App" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html: `
+        <div style="font-family: Arial;">
+          <h2>🏦 Banking Notification</h2>
+          <p>${message}</p>
+        </div>
+      `,
+    });
 
-  const info = await transporter.sendMail(mailOptions);
-
-  console.log("✅ Email sent:", info.response);
+    console.log("✅ Email sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Email Error:", error.message);
+  }
 };
+
+module.exports = { sendEmail };
