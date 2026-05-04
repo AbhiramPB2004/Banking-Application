@@ -3,22 +3,14 @@ const router = express.Router();
 
 const accountController = require("../controllers/accountController");
 
-// 🔥 TEMP USER INJECTION (only for dev phase)
-// router.use((req, res, next) => {
-//   req.user = {
-//     user_id: "11111111-1111-1111-1111-111111111111",
-//     role: "customer",
-//   };
-//   next();
-// });
+const { authenticateToken } = require("../../../shared/middlewares/authMiddleware");
 
-//when middleware is ready
-//app.use("/accounts", authMiddleware, accountRoutes);
+// Apply middleware
+router.use(authenticateToken);
 
-// Routes (correct order)
-// router.post("/", accountController.createAccount);
+// Routes
+router.post("/", accountController.createAccount);
 
-// IMPORTANT ORDER
 router.get("/user/me", accountController.getUserAccounts);
 router.get("/:id", accountController.getAccountById);
 

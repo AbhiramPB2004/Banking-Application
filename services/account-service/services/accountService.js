@@ -1,3 +1,4 @@
+const User = require("../../user-service/models/user.model");
 const Account = require("../models/account.model");
 const { sequelize } = require("../../../shared/config/db");
 
@@ -13,6 +14,19 @@ async function createAccount({
   branch_code = "0001",
   ifsc_code = "BANK0001",
 }) {
+
+  // 🔥 STEP 1: Fetch user
+  const user = await User.findByPk(user_id);
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  // 🔥 STEP 2: KYC validation
+  if (user.kyc_status !== "verified") {
+    throw new Error("KYC not completed. Cannot create account.");
+  }
+
   let account_number;
   let existingAccount;
 
@@ -31,7 +45,6 @@ async function createAccount({
     branch_code,
     ifsc_code,
 
-    // ✅ MATCHES YOUR DB STRUCTURE
     balance: initial_deposit,
     available_balance: initial_deposit,
     min_balance: 1000,
