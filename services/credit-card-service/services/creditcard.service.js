@@ -4,6 +4,7 @@
  */
 const CreditCard = require('../models/creditcard.model');
 const creditScoreCalculator = require('../../../shared/utils/creditScoreCalculator');
+const accountService = require('../../../services/account-service/services/accountService');
 
 class CreditCardService {
     async applyForCreditCard(data) {
@@ -12,14 +13,22 @@ class CreditCardService {
         console.log(eligibility)
         if (!eligibility.eligible) throw new Error("Credit eligibility failed");
 
-        // Assign credit limit based on eligibility score
+        // Fetch user's bank account
+        const account = await accountService.getAccountByUserId(data.user_id);
+        if (!account) throw new Error("Linked bank account not found");
+
+        // Calculate capped credit limit: 10% of balance or requested limit (whichever is lower)
+        const allowedLimit = account.balance * 0.10;
+        const finalLimit = Math.min(data.requested_limit, allowedLimit);
+
+        // Assign credit limit based on eligibility score and balance cap
         return await CreditCard.create({
             user_id: data.user_id,
             linked_account_id: data.source_account_id || '00000000-0000-0000-0000-000000000000', // Fallback if missing
             card_number: this.generateCardNumber(),
             card_type: 'VISA_PREMIUM',
-            credit_limit: data.requested_limit,
-            available_limit: data.requested_limit,
+            credit_limit: finalLimit,
+            available_limit: finalLimit,
             billing_cycle_date: 1
         });
     }
