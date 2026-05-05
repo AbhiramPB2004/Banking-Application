@@ -20,6 +20,7 @@ const { sequelize } = require("../shared/config/db");
 require("../services/user-service/models/user.model");
 require("../services/account-service/models/account.model");
 require("../services/auth-service/models/session.model");
+require("../services/auth-service/models/emailOtp.model");
 require("../services/audit-service/models/auditLog.model");
 require("../services/loan-service/models/loan.model");
 require("../services/investment-service/models/investmentProduct.model");
@@ -40,6 +41,7 @@ const userRoutes = require("./Routes/user.routes");
 const accountRoutes = require(
   "../services/account-service/routes/account.routes"
 );
+const transactionRoutes = require("../services/transaction-service/routes/transaction.routes");
 const loanRoutes = require("../services/loan-service/routes/loan.routes");
 const investmentRoutes = require(
   "../services/investment-service/routes/investment.routes"
@@ -69,7 +71,7 @@ app.use(
   authenticateToken,
   creditCardRoutes
 );
-
+app.use("/transactions", authenticateToken ,transactionRoutes); 
 app.use(
   "/investments",
   authenticateToken,

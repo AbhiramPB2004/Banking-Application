@@ -43,6 +43,30 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+
+  verifyEmail: (email, otp) =>
+    request('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  resendVerificationOtp: (email) =>
+    request('/auth/resend-verification-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  forgotPassword: (email) =>
+    request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (email, otp, new_password) =>
+    request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, new_password }),
+    }),
 };
 
 // ─── User API ─────────────────────────────────────

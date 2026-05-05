@@ -1,5 +1,6 @@
 // /services/auth-service/controllers/authController.js
 const bcrypt = require("bcrypt");
+const Account = require("../../account-service/models/account.model");
 const {
   validateLoginInput,
 } = require("../validators/loginValidator");
@@ -33,7 +34,14 @@ const {
   prepareUserCredentials,
   generateUserTokens,
   createSession,
+  createEmailOtp,
+  verifyEmailOtp,
+  updatePassword,
 } = require("../services/authService");
+
+const {
+  validatePassword,
+} = require("../../../shared/security/passwordPolicy");
 
 const {
   logRegistration,
@@ -41,6 +49,42 @@ const {
   logLogin,
   logSecurityEvent
 } = require("../../audit-service/services/auditService");
+
+function getCookieOptions() {
+  return {
+    httpOnly: true,
+    secure:
+      process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+  };
+}
+
+function setAuthCookies(res, tokens) {
+  const cookieOptions = getCookieOptions();
+
+  res.cookie(
+    "access_token",
+    tokens.access_token,
+    {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
+    }
+  );
+
+  res.cookie(
+    "refresh_token",
+    tokens.refresh_token,
+    {
+      ...cookieOptions,
+      maxAge:
+        7 * 24 * 60 * 60 * 1000,
+    }
+  );
+}
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
 
 /**
  * User Registration Controller
@@ -53,6 +97,10 @@ const {
 async function registerUser(req, res) {
   try {
     const { auth, user, account } = req.body;
+
+    if (auth?.email) {
+      auth.email = normalizeEmail(auth.email);
+    }
 
     /**
      * Step 1: Validate Inputs
@@ -125,26 +173,19 @@ async function registerUser(req, res) {
       ifsc_code: account.ifsc_code,
     });
 
-    /**
-     * Step 6: Activate User
-     */
-    await activateUser(newUser.user_id);
+    newAccount.status = "pending";
+    await newAccount.save();
 
-    /**
-     * Step 7: Generate Tokens
-     */
-    const tokens = generateUserTokens(newUser);
-
-    /**
-     * Step 8: Create Session
-     */
-    await createSession({
+    const otpData = await createEmailOtp({
       user_id: newUser.user_id,
-      refresh_token: tokens.refresh_token,
-      device_info:
-        req.headers["user-agent"] || "Unknown Device",
-      ip_address: req.ip,
+      email: newUser.email,
+      purpose: "email_verification",
     });
+
+    await notificationService.notifyEmailVerificationOtp(
+      newUser,
+      otpData.otp
+    );
 
     /**
      * Step 9: Audit Logs
@@ -169,53 +210,18 @@ async function registerUser(req, res) {
     });
 
     /**
-     * Step 10: Set Secure Cookies
-     */
-    const cookieOptions = {
-      httpOnly: true,
-      secure:
-        process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-    };
-
-    res.cookie(
-      "access_token",
-      tokens.access_token,
-      {
-        ...cookieOptions,
-        maxAge: 15 * 60 * 1000, // 15 mins
-      }
-    );
-
-    res.cookie(
-      "refresh_token",
-      tokens.refresh_token,
-      {
-        ...cookieOptions,
-        maxAge:
-          7 * 24 * 60 * 60 * 1000, // 7 days
-      }
-    );
-    await notificationService.notifyRegister(newUser);
-    // await notificationService.sendNotification({
-    //   user_id: newUser.user_id, 
-    //   type: "email",
-    //   recipient: auth.email,
-    //   message: "Your bank account has been created successfully.",
-    // });
-
-    /**
      * Step 11: Success Response
      */
     return res.status(201).json({
       success: true,
-      message: "User registered successfully.",
+      message: "Registration successful. Please verify your email OTP to activate your account.",
+      requires_email_verification: true,
       user: {
         user_id: newUser.user_id,
         full_name: newUser.full_name,
         email: newUser.email,
         phone: newUser.phone,
-        status: "active",
+        status: "pending",
       },
       account: {
         account_id: newAccount.account_id,
@@ -224,6 +230,7 @@ async function registerUser(req, res) {
         account_type:
           newAccount.account_type,
         balance: newAccount.balance,
+        status: newAccount.status,
       },
     });
   } catch (error) {
@@ -245,6 +252,235 @@ async function registerUser(req, res) {
   }
 }
 
+async function verifyEmail(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required.",
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified.",
+      });
+    }
+
+    await verifyEmailOtp({
+      email,
+      otp,
+      purpose: "email_verification",
+    });
+
+    const activatedUser = await activateUser(user.user_id);
+
+    await Account.update(
+      { status: "active" },
+      {
+        where: {
+          user_id: user.user_id,
+          status: "pending",
+        },
+      }
+    );
+
+    const tokens = generateUserTokens(activatedUser);
+
+    await createSession({
+      user_id: activatedUser.user_id,
+      refresh_token: tokens.refresh_token,
+      device_info:
+        req.headers["user-agent"] || "Unknown Device",
+      ip_address: req.ip,
+    });
+
+    setAuthCookies(res, tokens);
+
+    await notificationService.notifyRegister(activatedUser);
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified and account activated successfully.",
+      user: {
+        user_id: activatedUser.user_id,
+        full_name: activatedUser.full_name,
+        email: activatedUser.email,
+        role: activatedUser.role,
+        status: activatedUser.status,
+      },
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
+async function resendEmailVerificationOtp(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified.",
+      });
+    }
+
+    const otpData = await createEmailOtp({
+      user_id: user.user_id,
+      email: user.email,
+      purpose: "email_verification",
+    });
+
+    await notificationService.notifyEmailVerificationOtp(
+      user,
+      otpData.otp
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification OTP sent successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
+async function requestPasswordReset(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (user && user.status === "active") {
+      const otpData = await createEmailOtp({
+        user_id: user.user_id,
+        email: user.email,
+        purpose: "password_reset",
+      });
+
+      await notificationService.notifyPasswordResetOtp(
+        user,
+        otpData.otp
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "If the email is registered, a password reset OTP has been sent.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Unable to process password reset request.",
+    });
+  }
+}
+
+async function resetPassword(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+    const newPassword = req.body.new_password;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP, and new password are required.",
+      });
+    }
+
+    const passwordValidation = validatePassword(newPassword);
+
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: passwordValidation.message,
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (!user || user.status !== "active") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid password reset request.",
+      });
+    }
+
+    await verifyEmailOtp({
+      email,
+      otp,
+      purpose: "password_reset",
+    });
+
+    await updatePassword(user, newPassword);
+
+    await logSecurityEvent({
+      user_id: user.user_id,
+      action_type: "password_reset",
+      entity_id: user.user_id,
+      ip_address: req.ip,
+      status: "success",
+      metadata: {
+        email: user.email,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. Please log in again.",
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
 /**
  * User Login Controller
  *
@@ -258,7 +494,8 @@ async function registerUser(req, res) {
  */
 async function loginUser(req, res) {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     /**
      * Step 1: Validate Input
@@ -343,6 +580,15 @@ async function loginUser(req, res) {
       user.status !==
       "active"
     ) {
+      if (user.status === "pending") {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Please verify your email OTP before logging in.",
+          requires_email_verification: true,
+        });
+      }
+
       return res.status(403).json({
         success: false,
         message:
@@ -378,41 +624,7 @@ async function loginUser(req, res) {
     /**
      * Step 7: Set Secure Cookies
      */
-    const cookieOptions = {
-      httpOnly: true,
-      secure:
-        process.env
-          .NODE_ENV ===
-        "production",
-      sameSite:
-        "Strict",
-    };
-
-    res.cookie(
-      "access_token",
-      tokens.access_token,
-      {
-        ...cookieOptions,
-        maxAge:
-          15 *
-          60 *
-          1000,
-      }
-    );
-
-    res.cookie(
-      "refresh_token",
-      tokens.refresh_token,
-      {
-        ...cookieOptions,
-        maxAge:
-          7 *
-          24 *
-          60 *
-          60 *
-          1000,
-      }
-    );
+    setAuthCookies(res, tokens);
     await notificationService.notifyLogin(user, req.ip);
     /**
      * Step 8: Audit Success
@@ -472,5 +684,9 @@ async function loginUser(req, res) {
 
 module.exports = {
   registerUser,
+  verifyEmail,
+  resendEmailVerificationOtp,
+  requestPasswordReset,
+  resetPassword,
   loginUser
 };

@@ -48,9 +48,40 @@ export function AuthProvider({ children }) {
   const register = async (payload) => {
     const res = await authAPI.register(payload);
     if (res.success) {
-      // After registration, fetch full profile
+      showToast('success', res.message || 'Verification OTP sent to your email.');
+    }
+    return res;
+  };
+
+  const verifyEmail = async (email, otp) => {
+    const res = await authAPI.verifyEmail(email, otp);
+    if (res.success) {
       await checkAuth();
-      showToast('success', `Welcome to Horizon Bank, ${res.user?.full_name || 'User'}!`);
+      showToast('success', 'Email verified. Your account is active now.');
+    }
+    return res;
+  };
+
+  const resendVerificationOtp = async (email) => {
+    const res = await authAPI.resendVerificationOtp(email);
+    if (res.success) {
+      showToast('success', 'Verification OTP sent again.');
+    }
+    return res;
+  };
+
+  const forgotPassword = async (email) => {
+    const res = await authAPI.forgotPassword(email);
+    if (res.success) {
+      showToast('success', res.message || 'Password reset OTP sent.');
+    }
+    return res;
+  };
+
+  const resetPassword = async (email, otp, newPassword) => {
+    const res = await authAPI.resetPassword(email, otp, newPassword);
+    if (res.success) {
+      showToast('success', 'Password reset successfully. Please log in.');
     }
     return res;
   };
@@ -100,6 +131,10 @@ export function AuthProvider({ children }) {
     toast,
     showToast,
     register,
+    verifyEmail,
+    resendVerificationOtp,
+    forgotPassword,
+    resetPassword,
     login,
     logout,
     refreshUser,

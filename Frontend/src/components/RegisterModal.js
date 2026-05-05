@@ -16,8 +16,10 @@ const RegisterModal = ({ onClose }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [otp, setOtp] = useState('');
 
-  const { register } = useAuth();
+  const { register, verifyEmail, resendVerificationOtp } = useAuth();
   const navigate = useNavigate();
 
   const update = (section, field, value) => {
@@ -115,7 +117,34 @@ const RegisterModal = ({ onClose }) => {
         },
       };
 
-      await register(payload);
+      const res = await register(payload);
+      setVerificationEmail(res.user?.email || payload.auth.email);
+      setStep(4);
+      setOtp('');
+      setError('');
+    } catch (err) {
+      const errors = err.data?.errors;
+      if (errors && Array.isArray(errors)) {
+        setError(errors.join('. '));
+      } else {
+        setError(err.data?.message || err.message || 'Registration failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verificationEmail || !otp) {
+      setError('Enter the OTP sent to your email');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await verifyEmail(verificationEmail, otp);
       onClose();
       navigate('/dashboard');
     } catch (err) {
@@ -125,6 +154,21 @@ const RegisterModal = ({ onClose }) => {
       } else {
         setError(err.data?.message || err.message || 'Registration failed');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!verificationEmail) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await resendVerificationOtp(verificationEmail);
+    } catch (err) {
+      setError(err.data?.message || err.message || 'Failed to resend OTP');
     } finally {
       setLoading(false);
     }
@@ -143,7 +187,7 @@ const RegisterModal = ({ onClose }) => {
         <div className="modal-header">
           <div className="header-icon"><i className="fas fa-university" /></div>
           <h2>Open New Account</h2>
-          <p>Join Horizon Bank in 3 easy steps</p>
+          <p>Join Horizon Bank in 4 secure steps</p>
           <button className="close-btn" onClick={onClose}><i className="fas fa-times" /></button>
         </div>
 
@@ -152,7 +196,8 @@ const RegisterModal = ({ onClose }) => {
           {[
             { n: 1, label: 'Credentials', icon: 'fa-key' },
             { n: 2, label: 'KYC Details', icon: 'fa-id-card' },
-            { n: 3, label: 'Account', icon: 'fa-university' }
+            { n: 3, label: 'Account', icon: 'fa-university' },
+            { n: 4, label: 'Verify', icon: 'fa-envelope-open-text' }
           ].map((s, i) => (
             <React.Fragment key={s.n}>
               {i > 0 && <div className={`progress-line ${step >= s.n ? 'active' : ''}`} />}
@@ -324,6 +369,37 @@ const RegisterModal = ({ onClose }) => {
             </div>
           )}
 
+          {step === 4 && (
+            <div className="form-step animate-fade">
+              <div className="verification-panel">
+                <div className="verification-icon">
+                  <i className="fas fa-envelope-open-text" />
+                </div>
+                <h3>Verify your email</h3>
+                <p>
+                  We sent a 6-digit OTP to <strong>{verificationEmail}</strong>.
+                  Enter it below to activate your account.
+                </p>
+              </div>
+
+              <div className="input-group">
+                <label><i className="fas fa-key" /> Email OTP</label>
+                <input
+                  className="input-field otp-input"
+                  value={otp}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    setError('');
+                  }}
+                  placeholder="000000"
+                  maxLength="6"
+                  required
+                />
+                <div className="input-hint"><i className="fas fa-clock" /> OTP expires in 10 minutes</div>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="error-alert" style={{ margin: '0 var(--space-lg) var(--space-md)' }}>
               <i className="fas fa-exclamation-triangle" />
@@ -332,7 +408,7 @@ const RegisterModal = ({ onClose }) => {
           )}
 
           <div className="modal-actions">
-            {step > 1 && (
+            {step > 1 && step < 4 && (
               <button type="button" className="btn btn-secondary" onClick={() => { setStep(step - 1); setError(''); }}>
                 <i className="fas fa-arrow-left" /> Back
               </button>
@@ -341,7 +417,7 @@ const RegisterModal = ({ onClose }) => {
               <button type="button" className="btn btn-primary" onClick={handleNext}>
                 Continue <i className="fas fa-arrow-right" />
               </button>
-            ) : (
+            ) : step === 3 ? (
               <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
                 {loading ? (
                   <><div className="loading-spinner sm" /> Creating Account...</>
@@ -349,6 +425,19 @@ const RegisterModal = ({ onClose }) => {
                   <><i className="fas fa-check-circle" /> Open Account</>
                 )}
               </button>
+            ) : (
+              <>
+                <button type="button" className="btn btn-secondary" onClick={handleResendOtp} disabled={loading}>
+                  Resend OTP
+                </button>
+                <button type="button" className="btn btn-primary btn-lg" onClick={handleVerifyEmail} disabled={loading || otp.length !== 6}>
+                  {loading ? (
+                    <><div className="loading-spinner sm" /> Verifying...</>
+                  ) : (
+                    <><i className="fas fa-check-circle" /> Verify & Activate</>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </form>

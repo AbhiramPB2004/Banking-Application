@@ -5,6 +5,10 @@ const router = express.Router();
 
 const {
   registerUser,
+  verifyEmail,
+  resendEmailVerificationOtp,
+  requestPasswordReset,
+  resetPassword,
   loginUser
 } = require("../controllers/authController");
 
@@ -13,6 +17,10 @@ const {
  * POST /auth/register
  */
 router.post("/register", registerUser);
+router.post("/verify-email", verifyEmail);
+router.post("/resend-verification-otp", resendEmailVerificationOtp);
+router.post("/forgot-password", requestPasswordReset);
+router.post("/reset-password", resetPassword);
 router.post(
   "/login",
   loginUser

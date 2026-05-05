@@ -72,6 +72,40 @@ const getEmailTemplate = (type, data) => {
         text: `Welcome ${data.name}, your account has been created successfully.`,
       };
 
+    case "EMAIL_VERIFICATION_OTP":
+      return {
+        subject: "Verify your email address",
+        html: baseTemplate(
+          "Email Verification",
+          `<p style="margin: 0 0 16px 0;">Hello <strong>${data.name}</strong>,</p>
+           <p style="margin: 0 0 16px 0;">Use this OTP to verify your email and activate your bank account.</p>
+           <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; text-align: center; margin: 8px 0;">
+             <p style="margin: 0 0 8px 0; font-size: 13px; color: #666666;">Verification OTP</p>
+             <p style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #1a1a2e;">${data.otp}</p>
+           </div>
+           <p style="margin: 16px 0 0 0; font-size: 13px; color: #888888;">This OTP expires in ${data.expiresInMinutes || 10} minutes.</p>`,
+          "#4CAF50"
+        ),
+        text: `Your email verification OTP is ${data.otp}. It expires in ${data.expiresInMinutes || 10} minutes.`,
+      };
+
+    case "PASSWORD_RESET_OTP":
+      return {
+        subject: "Reset your password",
+        html: baseTemplate(
+          "Password Reset",
+          `<p style="margin: 0 0 16px 0;">Hello <strong>${data.name}</strong>,</p>
+           <p style="margin: 0 0 16px 0;">Use this OTP to reset your password.</p>
+           <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; text-align: center; margin: 8px 0;">
+             <p style="margin: 0 0 8px 0; font-size: 13px; color: #666666;">Password Reset OTP</p>
+             <p style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #1a1a2e;">${data.otp}</p>
+           </div>
+           <p style="margin: 16px 0 0 0; font-size: 13px; color: #888888;">This OTP expires in ${data.expiresInMinutes || 10} minutes. If you did not request this, please ignore this email.</p>`,
+          "#FF9800"
+        ),
+        text: `Your password reset OTP is ${data.otp}. It expires in ${data.expiresInMinutes || 10} minutes.`,
+      };
+
     case "LOGIN":
       return {
         subject: "Login Alert",

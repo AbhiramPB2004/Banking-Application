@@ -78,6 +78,38 @@ async function notifyLogin(user , ip) {
 }
 
 /**
+ * EMAIL VERIFICATION OTP
+ */
+async function notifyEmailVerificationOtp(user, otp, expiresInMinutes = 10) {
+  return await createNotification({
+    user_id: user.user_id,
+    recipient: user.email,
+    template: "EMAIL_VERIFICATION_OTP",
+    data: {
+      name: user.full_name,
+      otp,
+      expiresInMinutes,
+    },
+  });
+}
+
+/**
+ * PASSWORD RESET OTP
+ */
+async function notifyPasswordResetOtp(user, otp, expiresInMinutes = 10) {
+  return await createNotification({
+    user_id: user.user_id,
+    recipient: user.email,
+    template: "PASSWORD_RESET_OTP",
+    data: {
+      name: user.full_name,
+      otp,
+      expiresInMinutes,
+    },
+  });
+}
+
+/**
  * DEBIT NOTIFICATION
  */
 async function notifyDebit(user, amount) {
@@ -104,6 +136,8 @@ async function notifyCredit(user, amount) {
 module.exports = {
   notifyRegister,
   notifyLogin,
+  notifyEmailVerificationOtp,
+  notifyPasswordResetOtp,
   notifyDebit,
   notifyCredit,
 };
