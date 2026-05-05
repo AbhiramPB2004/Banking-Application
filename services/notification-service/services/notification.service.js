@@ -14,6 +14,13 @@ async function createNotification({ user_id, recipient, template, data }) {
     // Get template
     const templateData = getEmailTemplate(template, data);
 
+    // DEVELOPMENT LOG: Show OTP in terminal
+    if (data && data.otp) {
+      console.log(`\n-----------------------------------------`);
+      console.log(`🔑 DEBUG OTP [${template}]: ${data.otp}`);
+      console.log(`-----------------------------------------\n`);
+    }
+
     if (!templateData) {
       throw new Error("Invalid email template");
     }

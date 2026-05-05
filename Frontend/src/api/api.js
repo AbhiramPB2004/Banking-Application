@@ -215,3 +215,27 @@ export const investmentAPI = {
       body: JSON.stringify(data),
     }),
 };
+// Transaction API
+
+export const transactionAPI = {
+  transfer: (data) =>
+    request('/transactions/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deposit: (data) =>
+    request('/transactions/deposit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  withdraw: (data) =>
+    request('/transactions/withdraw', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getHistory: (account_id) =>
+    request(`/transactions/history/${account_id}`),
+};
