@@ -57,6 +57,10 @@ const ProfilePage = () => {
     rejected: 'badge-danger',
   };
 
+  // Check if KYC is verified - if yes, disable editing
+  const isKYCVerified = currentUser?.kyc_status === 'verified';
+  const isKYCRejected = currentUser?.kyc_status === 'rejected';
+
   return (
     <div className="profile-page">
       <div className="page-header">
@@ -155,14 +159,14 @@ const ProfilePage = () => {
             <input className="input-field"
               value={editingKYC ? kyc.aadhaar_number : currentUser?.aadhaar_number || ''}
               onChange={(e) => setKYC({ ...kyc, aadhaar_number: e.target.value })}
-              disabled={!editingKYC} />
+              disabled={!editingKYC || isKYCVerified} />
           </div>
           <div className="input-group">
             <label><i className="fas fa-file-invoice" /> PAN Number</label>
             <input className="input-field"
               value={editingKYC ? kyc.pan_number : currentUser?.pan_number || ''}
               onChange={(e) => setKYC({ ...kyc, pan_number: e.target.value.toUpperCase() })}
-              disabled={!editingKYC} />
+              disabled={!editingKYC || isKYCVerified} />
           </div>
           <div className="input-group">
             <label><i className="fas fa-calendar" /> Date of Birth</label>
@@ -176,18 +180,39 @@ const ProfilePage = () => {
 
         <div style={{ marginTop: '12px' }}>
           {!editingKYC ? (
-            <button className="btn btn-secondary btn-sm" onClick={() => setEditingKYC(true)}>
+            <button 
+              className="btn btn-secondary btn-sm" 
+              onClick={() => setEditingKYC(true)}
+              disabled={isKYCVerified}
+              title={isKYCVerified ? "KYC is already verified and cannot be edited" : "Update KYC information"}>
               <i className="fas fa-pen" /> Update KYC
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setEditingKYC(false)}>Cancel</button>
-              <button className="btn btn-primary btn-sm" onClick={handleKYCSave} disabled={loading}>
+              <button 
+                className="btn btn-primary btn-sm" 
+                onClick={handleKYCSave} 
+                disabled={loading || isKYCVerified}>
                 {loading ? <div className="loading-spinner sm" /> : <><i className="fas fa-save" /> Save KYC</>}
               </button>
             </div>
           )}
         </div>
+
+        {/* Info message for verified KYC */}
+        {isKYCVerified && (
+          <div style={{ marginTop: '12px' }} className="alert alert-info">
+            <i className="fas fa-check-circle"></i> Your KYC is already verified. You cannot modify KYC details once verified.
+          </div>
+        )}
+
+        {/* Info message for rejected KYC */}
+        {isKYCRejected && (
+          <div style={{ marginTop: '12px' }} className="alert alert-warning">
+            <i className="fas fa-exclamation-triangle"></i> Your KYC was rejected. Please update your information for re-verification.
+          </div>
+        )}
       </div>
     </div>
   );

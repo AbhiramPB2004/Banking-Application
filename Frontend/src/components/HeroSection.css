@@ -1,3 +1,5 @@
+/* HeroSection.css - Updated for 3 cards */
+
 .hero {
   min-height: 100vh;
   padding-top: calc(var(--navbar-height) + var(--space-2xl));
@@ -252,7 +254,7 @@
   font-weight: 600;
 }
 
-/* Features */
+/* Features - 3 cards grid */
 .features {
   max-width: 1200px;
   margin: var(--space-2xl) auto 0;
@@ -285,7 +287,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: var(--primary-glow);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.05));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -331,5 +333,17 @@
 
   .features {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

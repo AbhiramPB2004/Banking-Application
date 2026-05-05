@@ -12,6 +12,7 @@ const Sidebar = () => {
     { path: '/credit-cards', icon: 'fa-credit-card', label: 'Credit Cards' },
     { path: '/loans', icon: 'fa-hand-holding-usd', label: 'Loans' },
     { path: '/investments', icon: 'fa-chart-line', label: 'Investments' },
+    { path: '/fd', icon: 'fa-certificate', label: 'Fixed Deposits' }, // Added FD link
     { path: '/profile', icon: 'fa-user-circle', label: 'Profile' },
   ];
 

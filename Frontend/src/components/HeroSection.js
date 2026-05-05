@@ -87,24 +87,24 @@ const HeroSection = ({ onRegisterClick, onLoginClick }) => {
       <div className="features">
         <div className="feature-card">
           <div className="feature-icon">
-            <i className="fas fa-bolt" />
+            <i className="fas fa-mobile-alt" />
           </div>
-          <h3>Instant Transfers</h3>
-          <p>Send money in seconds with zero fees between Horizon accounts</p>
+          <h3>Free Debit Card</h3>
+          <p>Get a free virtual debit card instantly with ₹1 lakh daily transaction limit</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon">
-            <i className="fas fa-shield-alt" />
+            <i className="fas fa-hand-holding-usd" />
           </div>
-          <h3>Bank-Grade Security</h3>
-          <p>AES-256 encryption, 2FA authentication, and zero-liability protection</p>
+          <h3>Flexible Loan Options</h3>
+          <p>Pre-approved personal loans starting from just 10.99% interest rate</p>
         </div>
         <div className="feature-card">
           <div className="feature-icon">
-            <i className="fas fa-chart-line" />
+            <i className="fas fa-rupee-sign" />
           </div>
-          <h3>Smart Insights</h3>
-          <p>AI-powered spending analytics and personalized savings goals</p>
+          <h3>Daily Interest Credits</h3>
+          <p>Get interest credited daily to your account with up to 7% per annum on savings</p>
         </div>
       </div>
     </div>

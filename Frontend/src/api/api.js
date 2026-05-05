@@ -215,3 +215,36 @@ export const investmentAPI = {
       body: JSON.stringify(data),
     }),
 };
+
+// Add to your existing api.js file
+
+export const fdAPI = {
+  // Get all FDs for current user
+  getMyFDs: () =>
+    request('/fd/'),
+
+  // Create a new FD
+  createFD: (data) =>
+    request('/fd/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Get FD details by ID
+  getFDDetails: (fdId) =>
+    request(`/fd/${fdId}`),
+
+  // Get FD transaction history
+  getFDHistory: (fdId) =>
+    request(`/fd/${fdId}/transactions`),
+
+  // Premature closure (if allowed)
+  closeFDPremature: (fdId) =>
+    request(`/fd/${fdId}/close`, {
+      method: 'POST',
+    }),
+
+  // Get FD interest rates
+  getInterestRates: () =>
+    request('/fd/interest-rates'),
+};

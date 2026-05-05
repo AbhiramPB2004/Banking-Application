@@ -7,7 +7,7 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import ProtectedRoute from './components/ProtectedRoute';
-
+import FDPage from './components/FDPage';
 import HeroSection from './components/HeroSection';
 import Dashboard from './components/Dashboard';
 import ProfilePage from './components/ProfilePage';
@@ -97,6 +97,14 @@ function AppContent() {
           <ProtectedRoute>
             <div className="app-layout"><div className="main-content animate-fade">
               <LoansPage />
+            </div></div>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/fd" element={
+          <ProtectedRoute>
+            <div className="app-layout"><div className="main-content animate-fade">
+              <FDPage />
             </div></div>
           </ProtectedRoute>
         } />
