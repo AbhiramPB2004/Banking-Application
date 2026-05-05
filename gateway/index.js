@@ -28,6 +28,7 @@ require("../services/investment-service/models/portfolio.model");
 require("../services/investment-service/models/holding.model");
 require("../services/investment-service/models/investmentTransaction.model");
 require("../services/investment-service/models/navHistory.model");
+require("../services/FD-service/models/fd.model");
 const {
   authenticateToken,
 } = require("../shared/middlewares/authMiddleware");
@@ -46,6 +47,10 @@ const loanRoutes = require("../services/loan-service/routes/loan.routes");
 const investmentRoutes = require(
   "../services/investment-service/routes/investment.routes"
 );
+const fdRoutes = require(
+  "../services/FD-service/routes/fd.routes"
+);
+
 const cookieParser = require("cookie-parser");
 // Middleware
 app.use(express.json());
@@ -70,6 +75,11 @@ app.use(
   "/credit-cards",
   authenticateToken,
   creditCardRoutes
+);
+app.use(
+  "/fd",
+  authenticateToken,
+  fdRoutes
 );
 app.use("/transactions", authenticateToken ,transactionRoutes); 
 app.use(

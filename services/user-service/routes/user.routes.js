@@ -18,6 +18,8 @@ router.put("/me", userController.updateUserProfile);
 /* Submit / update own KYC */
 router.patch("/kyc", userController.updateKYC);
 
+router.patch("/kyc/verify", userController.verifyKYC);
+
 
 /**
  * ADMIN ROUTES
@@ -30,4 +32,4 @@ router.patch("/status", userController.updateUserStatus);
 /* Get all users */
 router.get("/all", userController.getAllUsers);
 
-module.exports = router;
+module.exports = router; 

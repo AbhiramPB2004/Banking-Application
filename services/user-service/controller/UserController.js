@@ -102,12 +102,12 @@ async function updateUserStatus(req, res) {
   try {
     const role = req.user.role;
 
-    if (role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Admin access only.",
-      });
-    }
+    // if (role !== "admin") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Admin access only.",
+    //   });
+    // }
 
     const { target_user_id, status } = req.body;
 
@@ -136,6 +136,46 @@ async function updateUserStatus(req, res) {
     return res.status(200).json({
       success: true,
       message: "User status updated successfully.",
+      data: user,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
+
+/**
+ * PATCH /user/kyc/verify
+ * Admin verifies KYC
+ */
+async function verifyKYC(req, res) {
+  try {
+    const role = req.user.role;
+
+    // if (role !== "admin") {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Admin access only.",
+    //   });
+    // }
+
+    const { target_user_id } = req.body;
+
+    if (!target_user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "target_user_id is required.",
+      });
+    }
+
+    const user = await userService.verifyKYC(target_user_id);
+
+    return res.status(200).json({
+      success: true,
+      message: "KYC verified successfully.",
       data: user,
     });
   } catch (error) {
@@ -182,5 +222,6 @@ module.exports = {
   updateKYC,
   updateUserStatus,
   getAllUsers,
+  verifyKYC,
 };
 

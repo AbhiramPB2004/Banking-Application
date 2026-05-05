@@ -90,21 +90,64 @@ async function updateUserProfile(user_id, data) {
 /**
  * Update KYC
  */
+/**
+ * Update KYC (Aadhaar & PAN immutable after first set)
+ */
 async function updateKYCStatus(user_id, data) {
   const user = await User.findByPk(user_id);
 
   if (!user) throw new Error("User not found.");
 
-  if (data.aadhaar_number)
+  // 🚫 Aadhaar update not allowed if already exists
+  if (user.aadhaar_number && data.aadhaar_number) {
+    throw new Error("Aadhaar number cannot be updated once submitted.");
+  }
+
+  // 🚫 PAN update not allowed if already exists
+  if (user.pan_number && data.pan_number) {
+    throw new Error("PAN number cannot be updated once submitted.");
+  }
+
+  // ✅ Set Aadhaar (only first time)
+  if (!user.aadhaar_number && data.aadhaar_number) {
     user.aadhaar_number = data.aadhaar_number;
+  }
 
-  if (data.pan_number)
+  // ✅ Set PAN (only first time)
+  if (!user.pan_number && data.pan_number) {
     user.pan_number = data.pan_number;
+  }
 
-  if (data.kyc_status)
+  // ✅ Update KYC status
+  if (data.kyc_status) {
     user.kyc_status = data.kyc_status;
+  } else {
+    user.kyc_status = "verified";
+  }
 
   await user.save();
+
+  return user;
+}
+
+
+/**
+ * Verify KYC (Admin)
+ */
+async function verifyKYC(user_id) {
+  const user = await User.findByPk(user_id);
+
+  if (!user) throw new Error("User not found.");
+
+  // Optional: ensure user has submitted KYC
+  if (!user.aadhaar_number || !user.pan_number) {
+    throw new Error("KYC not submitted yet.");
+  }
+
+  user.kyc_status = "verified";
+
+  await user.save();
+
   return user;
 }
 
@@ -170,4 +213,5 @@ module.exports = {
   suspendUser,
   closeUser,
   getAllUsers,
+  verifyKYC,
 };
