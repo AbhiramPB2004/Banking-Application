@@ -20,7 +20,7 @@ const TransactionsPage = () => {
     target_account_number: '',
     amount: '',
     transaction_pin: '',
-    transfer_type: 'IMPS', // IMPS, NEFT, RTGS
+    transfer_type: 'imps', // IMPS, NEFT, RTGS
     description: ''
   });
 
@@ -201,9 +201,9 @@ const TransactionsPage = () => {
                     value={formData.transfer_type}
                     onChange={handleInputChange}
                   >
-                    <option value="IMPS">IMPS (Instant)</option>
-                    <option value="NEFT">NEFT (Same day)</option>
-                    <option value="RTGS">RTGS (High value)</option>
+                    <option value="imps">IMPS (Instant)</option>
+                    <option value="neft">NEFT (Same day)</option>
+                    <option value="rtgs">RTGS (High value)</option>
                   </select>
                 </div>
               </>
@@ -244,8 +244,8 @@ const TransactionsPage = () => {
                 type="password"
                 name="transaction_pin"
                 className="input-field"
-                placeholder="Enter 4-digit PIN"
-                maxLength="4"
+                placeholder="Enter 4 or 6 -digit PIN"
+                maxLength="6"
                 value={formData.transaction_pin}
                 onChange={handleInputChange}
                 required

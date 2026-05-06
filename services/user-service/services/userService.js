@@ -1,6 +1,6 @@
 const User = require("../models/user.model");
 const { Op } = require("sequelize");
-
+ 
 /**
  * Check duplicate user
  */
@@ -21,7 +21,7 @@ async function checkExistingUser({
     },
   });
 }
-
+ 
 /**
  * Create user
  */
@@ -44,14 +44,14 @@ async function createUser(userData) {
     status: "pending",
   });
 }
-
+ 
 /**
  * Get user by ID
  */
 async function getUserById(user_id) {
   return await User.findByPk(user_id);
 }
-
+ 
 /**
  * Get user by Email
  */
@@ -60,15 +60,15 @@ async function getUserByEmail(email) {
     where: { email },
   });
 }
-
+ 
 /**
  * Update profile
  */
 async function updateUserProfile(user_id, data) {
   const user = await User.findByPk(user_id);
-
+ 
   if (!user) throw new Error("User not found.");
-
+ 
   const allowedFields = [
     "full_name",
     "phone",
@@ -76,80 +76,123 @@ async function updateUserProfile(user_id, data) {
     "occupation",
     "annual_income",
   ];
-
+ 
   allowedFields.forEach((field) => {
     if (data[field] !== undefined) {
       user[field] = data[field];
     }
   });
-
+ 
   await user.save();
   return user;
 }
-
+ 
 /**
  * Update KYC
  */
+/**
+ * Update KYC (Aadhaar & PAN immutable after first set)
+ */
 async function updateKYCStatus(user_id, data) {
   const user = await User.findByPk(user_id);
-
+ 
   if (!user) throw new Error("User not found.");
-
-  if (data.aadhaar_number)
+ 
+  // 🚫 Aadhaar update not allowed if already exists
+  if (user.aadhaar_number && data.aadhaar_number) {
+    throw new Error("Aadhaar number cannot be updated once submitted.");
+  }
+ 
+  // 🚫 PAN update not allowed if already exists
+  if (user.pan_number && data.pan_number) {
+    throw new Error("PAN number cannot be updated once submitted.");
+  }
+ 
+  // ✅ Set Aadhaar (only first time)
+  if (!user.aadhaar_number && data.aadhaar_number) {
     user.aadhaar_number = data.aadhaar_number;
-
-  if (data.pan_number)
+  }
+ 
+  // ✅ Set PAN (only first time)
+  if (!user.pan_number && data.pan_number) {
     user.pan_number = data.pan_number;
-
-  if (data.kyc_status)
+  }
+ 
+  // ✅ Update KYC status
+  if (data.kyc_status) {
     user.kyc_status = data.kyc_status;
-
+  } else {
+    user.kyc_status = "verified";
+  }
+ 
   await user.save();
+ 
   return user;
 }
-
+ 
+ 
+/**
+ * Verify KYC (Admin)
+ */
+async function verifyKYC(user_id) {
+  const user = await User.findByPk(user_id);
+ 
+  if (!user) throw new Error("User not found.");
+ 
+  // Optional: ensure user has submitted KYC
+  if (!user.aadhaar_number || !user.pan_number) {
+    throw new Error("KYC not submitted yet.");
+  }
+ 
+  user.kyc_status = "verified";
+ 
+  await user.save();
+ 
+  return user;
+}
+ 
 /**
  * Activate user
  */
 async function activateUser(user_id) {
   const user = await User.findByPk(user_id);
-
+ 
   if (!user) throw new Error("User not found.");
-
+ 
   user.status = "active";
   await user.save();
-
+ 
   return user;
 }
-
+ 
 /**
  * Suspend user
  */
 async function suspendUser(user_id) {
   const user = await User.findByPk(user_id);
-
+ 
   if (!user) throw new Error("User not found.");
-
+ 
   user.status = "suspended";
   await user.save();
-
+ 
   return user;
 }
-
+ 
 /**
  * Close user
  */
 async function closeUser(user_id) {
   const user = await User.findByPk(user_id);
-
+ 
   if (!user) throw new Error("User not found.");
-
+ 
   user.status = "closed";
   await user.save();
-
+ 
   return user;
 }
-
+ 
 /**
  * Admin get all users
  */
@@ -158,7 +201,7 @@ async function getAllUsers() {
     order: [["created_at", "DESC"]],
   });
 }
-
+ 
 module.exports = {
   checkExistingUser,
   createUser,
@@ -170,4 +213,7 @@ module.exports = {
   suspendUser,
   closeUser,
   getAllUsers,
+  verifyKYC,
 };
+ 
+
