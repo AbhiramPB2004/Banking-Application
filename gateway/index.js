@@ -54,7 +54,7 @@ app.use(cookieParser());
 
 // Gateway routes
 app.use("/auth", authRoutes);
-app.use("/user", authenticateToken , userRoutes);
+app.use("/user", authenticateToken, userRoutes);
 app.use(
   "/accounts",
   authenticateToken,
@@ -71,7 +71,7 @@ app.use(
   authenticateToken,
   creditCardRoutes
 );
-app.use("/transactions", authenticateToken ,transactionRoutes); 
+app.use("/transactions", authenticateToken, transactionRoutes);
 app.use(
   "/investments",
   authenticateToken,
