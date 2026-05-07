@@ -20,45 +20,65 @@ const TransactionsPage = () => {
     target_account_number: '',
     amount: '',
     transaction_pin: '',
-    transfer_type: 'imps', // IMPS, NEFT, RTGS
+    transfer_type: 'imps',
     description: ''
   });
 
   const fetchAccounts = async () => {
     try {
       const res = await accountAPI.getMyAccounts();
+
       if (res.success) {
         setAccounts(res.data || []);
+
         if (res.data?.length > 0) {
-          setFormData(prev => ({ ...prev, source_account_id: res.data[0].account_id }));
+          setFormData(prev => ({
+            ...prev,
+            source_account_id: res.data[0].account_id
+          }));
+
           setSelectedAccountId(res.data[0].account_id);
         }
       }
+
     } catch (err) {
+
       showToast('error', 'Failed to load accounts');
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
   const fetchHistory = async (id) => {
     if (!id) return;
+
     setHistoryLoading(true);
+
     try {
+
       const res = await transactionAPI.getHistory(id);
+
       if (res.success) {
         setHistory(res.data || []);
       }
+
     } catch (err) {
+
       showToast('error', 'Failed to load transaction history');
+
     } finally {
+
       setHistoryLoading(false);
+
     }
   };
 
   useEffect(() => {
     fetchAccounts();
-  }, []); // eslint-disable-line
+  }, []);
 
   useEffect(() => {
     if (selectedAccountId) {
@@ -68,7 +88,11 @@ const TransactionsPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -76,32 +100,62 @@ const TransactionsPage = () => {
     setActionLoading(true);
 
     try {
+
       let res;
+
+      // ✅ Find selected account
+      const selectedAccount = accounts.find(
+        acc => acc.account_id === formData.source_account_id
+      );
+
+      if (!selectedAccount) {
+        throw new Error('Selected account not found');
+      }
+
+      // 🔁 TRANSFER
       if (activeTab === 'transfer') {
+
         res = await transactionAPI.transfer({
-          source_account_id: formData.source_account_id,
-          target_account_number: formData.target_account_number,
+          from_account_number: selectedAccount.account_number,
+          to_account_number: formData.target_account_number,
           amount: parseFloat(formData.amount),
-          transfer_type: formData.transfer_type,
+          transaction_type: formData.transfer_type,
           transaction_pin: formData.transaction_pin,
           description: formData.description
         });
-      } else if (activeTab === 'deposit') {
-        res = await transactionAPI.deposit({
-          account_id: formData.source_account_id,
-          amount: parseFloat(formData.amount),
-          transaction_pin: formData.transaction_pin
-        });
-      } else if (activeTab === 'withdraw') {
-        res = await transactionAPI.withdraw({
-          account_id: formData.source_account_id,
-          amount: parseFloat(formData.amount),
-          transaction_pin: formData.transaction_pin
-        });
+
       }
 
+      // 💰 DEPOSIT
+      else if (activeTab === 'deposit') {
+
+        res = await transactionAPI.deposit({
+          account_number: selectedAccount.account_number,
+          amount: parseFloat(formData.amount),
+          transaction_pin: formData.transaction_pin
+        });
+
+      }
+
+      // 💸 WITHDRAW
+      else if (activeTab === 'withdraw') {
+
+        res = await transactionAPI.withdraw({
+          account_number: selectedAccount.account_number,
+          amount: parseFloat(formData.amount),
+          transaction_pin: formData.transaction_pin
+        });
+
+      }
+
+      // ✅ SUCCESS
       if (res?.success) {
-        showToast('success', `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} successful!`);
+
+        showToast(
+          'success',
+          `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} successful!`
+        );
+
         // Reset non-account fields
         setFormData(prev => ({
           ...prev,
@@ -110,14 +164,28 @@ const TransactionsPage = () => {
           transaction_pin: '',
           description: ''
         }));
+
         // Refresh data
         fetchAccounts();
         fetchHistory(formData.source_account_id);
       }
+
     } catch (err) {
-      showToast('error', err.data?.message || 'Transaction failed');
+
+      console.error('TRANSACTION ERROR:', err);
+
+      showToast(
+        'error',
+        err?.response?.data?.message ||
+        err?.data?.message ||
+        err?.message ||
+        'Transaction failed'
+      );
+
     } finally {
+
       setActionLoading(false);
+
     }
   };
 
@@ -137,12 +205,14 @@ const TransactionsPage = () => {
         >
           <i className="fas fa-exchange-alt" /> Transfer
         </button>
+
         <button 
           className={`tab-btn ${activeTab === 'deposit' ? 'active' : ''}`}
           onClick={() => setActiveTab('deposit')}
         >
           <i className="fas fa-arrow-down" /> Deposit
         </button>
+
         <button 
           className={`tab-btn ${activeTab === 'withdraw' ? 'active' : ''}`}
           onClick={() => setActiveTab('withdraw')}
@@ -152,16 +222,27 @@ const TransactionsPage = () => {
       </div>
 
       <div className="transactions-grid">
+
         <div className="transaction-card">
+
           <h2>
-            <i className={`fas ${activeTab === 'transfer' ? 'fa-exchange-alt' : activeTab === 'deposit' ? 'fa-arrow-down' : 'fa-arrow-up'}`} />
+            <i className={`fas ${
+              activeTab === 'transfer'
+                ? 'fa-exchange-alt'
+                : activeTab === 'deposit'
+                ? 'fa-arrow-down'
+                : 'fa-arrow-up'
+            }`} />
+
             {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Funds
           </h2>
 
           <form onSubmit={handleSubmit}>
+
             <div className="form-group">
               <label>Select Account</label>
-              <select 
+
+              <select
                 name="source_account_id"
                 className="account-selector"
                 value={formData.source_account_id}
@@ -173,7 +254,8 @@ const TransactionsPage = () => {
               >
                 {accounts.map(acc => (
                   <option key={acc.account_id} value={acc.account_id}>
-                    {acc.account_number} ({acc.account_type}) - ₹{parseFloat(acc.balance).toLocaleString()}
+                    {acc.account_number} ({acc.account_type}) - ₹
+                    {parseFloat(acc.balance).toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -183,7 +265,8 @@ const TransactionsPage = () => {
               <>
                 <div className="form-group">
                   <label>Recipient Account Number</label>
-                  <input 
+
+                  <input
                     type="text"
                     name="target_account_number"
                     className="input-field"
@@ -193,14 +276,17 @@ const TransactionsPage = () => {
                     required
                   />
                 </div>
+
                 <div className="form-group">
                   <label>Transfer Type</label>
-                  <select 
+
+                  <select
                     name="transfer_type"
                     className="input-field"
                     value={formData.transfer_type}
                     onChange={handleInputChange}
                   >
+                    <option value="internal">Internal</option>
                     <option value="imps">IMPS (Instant)</option>
                     <option value="neft">NEFT (Same day)</option>
                     <option value="rtgs">RTGS (High value)</option>
@@ -211,7 +297,8 @@ const TransactionsPage = () => {
 
             <div className="form-group">
               <label>Amount (₹)</label>
-              <input 
+
+              <input
                 type="number"
                 name="amount"
                 className="input-field"
@@ -227,7 +314,8 @@ const TransactionsPage = () => {
             {activeTab === 'transfer' && (
               <div className="form-group">
                 <label>Description (Optional)</label>
-                <input 
+
+                <input
                   type="text"
                   name="description"
                   className="input-field"
@@ -240,90 +328,35 @@ const TransactionsPage = () => {
 
             <div className="form-group">
               <label>Transaction PIN</label>
-              <input 
+
+              <input
                 type="password"
                 name="transaction_pin"
                 className="input-field"
-                placeholder="Enter 4 or 6 -digit PIN"
+                placeholder="Enter 4 or 6-digit PIN"
                 maxLength="6"
                 value={formData.transaction_pin}
                 onChange={handleInputChange}
                 required
               />
-              <p className="pin-hint">Enter your secure transaction PIN to authorize</p>
+
+              <p className="pin-hint">
+                Enter your secure transaction PIN to authorize
+              </p>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn btn-primary btn-block"
               disabled={actionLoading}
               style={{ marginTop: '1rem' }}
             >
-              {actionLoading ? <LoadingSpinner size="sm" text="" /> : `Confirm ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
+              {actionLoading
+                ? <LoadingSpinner size="sm" text="" />
+                : `Confirm ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
             </button>
+
           </form>
-        </div>
-
-        <div className="history-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2><i className="fas fa-history" /> Recent Activity</h2>
-            <select 
-              className="account-selector" 
-              style={{ width: 'auto' }}
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-            >
-              {accounts.map(acc => (
-                <option key={acc.account_id} value={acc.account_id}>
-                  {acc.account_number}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="history-table-container">
-            {historyLoading ? (
-              <LoadingSpinner text="Fetching history..." />
-            ) : history.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-receipt" style={{ fontSize: '2rem', marginBottom: '1rem', color: 'var(--text-muted)' }} />
-                <p>No transactions found for this account</p>
-              </div>
-            ) : (
-              <table className="history-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((tx) => {
-                    const isDebit = tx.transaction_type === 'DEBIT' || tx.type === 'transfer_out' || tx.type === 'withdrawal';
-                    return (
-                      <tr key={tx.transaction_id}>
-                        <td>{new Date(tx.created_at).toLocaleDateString()}</td>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{tx.description || tx.type.replace('_', ' ').toUpperCase()}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Ref: {tx.transaction_id.slice(0, 8)}</div>
-                        </td>
-                        <td>
-                          <span className={`transaction-status ${tx.status === 'COMPLETED' ? 'status-completed' : tx.status === 'FAILED' ? 'status-failed' : 'status-pending'}`}>
-                            {tx.status}
-                          </span>
-                        </td>
-                        <td className={isDebit ? 'amount-debit' : 'amount-credit'}>
-                          {isDebit ? '-' : '+'}₹{parseFloat(tx.amount).toLocaleString()}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
         </div>
       </div>
     </div>
