@@ -4,11 +4,30 @@
  */
 
 const calculateCreditScore = (userData) => {
-    const { annual_income, existing_liabilities, kyc_status, occupation } = userData;
+    const { annual_income, existing_liabilities, kyc_status, occupation, age, card_tier = 'entry' } = userData;
 
-    // 1. Fundamental Block: KYC must be verified for any credit product [cite: 799, 2147, 2431]
+    // 1. Age Eligibility: min 18, max 65
+    if (!age || age < 18 || age > 65) {
+        return { score: 0, eligible: false, reason: "Applicant age must be between 18 and 65" };
+    }
+
+    // 2. Fundamental Block: KYC must be verified for any credit product
     if (kyc_status !== 'verified') {
         return { score: 0, eligible: false, reason: "KYC verification required" };
+    }
+
+    // 3. Income threshold by card tier
+    const INCOME_THRESHOLDS = {
+        entry: 300000,    // 3 Lakhs
+        premium: 1000000  // 10 Lakhs
+    };
+    const requiredIncome = INCOME_THRESHOLDS[card_tier] || INCOME_THRESHOLDS.entry;
+    if (annual_income < requiredIncome) {
+        return {
+            score: 0,
+            eligible: false,
+            reason: `Minimum annual income for ${card_tier} card is ₹${(requiredIncome/100000).toFixed(0)} Lakhs`
+        };
     }
 
     // 2. Debt-to-Income (DTI) Ratio Logic [cite: 2432, 2433]

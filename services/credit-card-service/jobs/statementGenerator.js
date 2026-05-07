@@ -53,4 +53,20 @@ const generateMonthlyStatements = async () => {
     }
 };
 
-module.exports = generateMonthlyStatements;
+module.exports = {
+    generateMonthlyStatements,
+    generateCardStatement: async (card_id) => {
+        // Single card statement trigger called by billingCycle per card
+        try {
+            const card = await CreditCard.findByPk(card_id);
+            if (!card) {
+                logger.warn(`Statement generation skipped: Card ${card_id} not found`);
+                return;
+            }
+            logger.info(`Statement generated for Card: ${card.card_number}`);
+            // Future: persist to BillingRecords table or generate PDF here
+        } catch (error) {
+            logger.error(`Statement generation failed for Card ${card_id}: ${error.message}`);
+        }
+    }
+};

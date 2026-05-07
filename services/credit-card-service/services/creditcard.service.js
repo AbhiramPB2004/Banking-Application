@@ -22,14 +22,27 @@ class CreditCardService {
         const finalLimit = Math.min(data.requested_limit, allowedLimit);
 
         // Assign credit limit based on eligibility score and balance cap
+        // Set first due date: 20 days from today
+        const firstDueDate = new Date();
+        firstDueDate.setDate(firstDueDate.getDate() + 20);
+        const dueDateStr = firstDueDate.toISOString().split('T')[0];
+
+        // Set billing start date as today
+        const today = new Date().toISOString().split('T')[0];
+
         return await CreditCard.create({
             user_id: data.user_id,
-            linked_account_id: data.source_account_id || '00000000-0000-0000-0000-000000000000', // Fallback if missing
+            linked_account_id: data.source_account_id || '00000000-0000-0000-0000-000000000000',
             card_number: this.generateCardNumber(),
             card_type: 'VISA_PREMIUM',
             credit_limit: finalLimit,
             available_limit: finalLimit,
-            billing_cycle_date: 1
+            billing_cycle_date: 1,
+            due_date: dueDateStr,
+            last_billing_date: today,
+            interest_rate: 0.0360,
+            penalty_rate: 0.0200,
+            penalty_applied: false
         });
     }
 
@@ -55,6 +68,12 @@ class CreditCardService {
 
         // 3. Financial Math: Check limits
         const transactionAmount = parseFloat(amount);
+
+        // Guard: amount must be present and positive
+        if (!amount || isNaN(transactionAmount) || transactionAmount <= 0) {
+            throw new Error("Transaction amount must be a positive number");
+        }
+
         const availableLimit = parseFloat(card.available_limit);
 
         if (availableLimit < transactionAmount) {
@@ -87,14 +106,22 @@ class CreditCardService {
             throw new Error("Credit card not found or unauthorized access.");
         }
 
+        const today = new Date();
+        const dueDate = card.due_date ? new Date(card.due_date) : null;
+        const isOverdue = dueDate ? today > dueDate : false;
+
         return {
             card_id: card.card_id,
-            card_number: card.card_number, // In a real app, you'd mask this (e.g., **** **** **** 1234)
+            card_number: card.card_number,
             card_type: card.card_type,
             credit_limit: parseFloat(card.credit_limit),
             available_limit: parseFloat(card.available_limit),
             outstanding_balance: parseFloat(card.outstanding_balance),
             minimum_due: parseFloat(card.minimum_due),
+            due_date: card.due_date || null,
+            is_overdue: isOverdue,
+            penalty_applied: card.penalty_applied,
+            interest_rate_monthly: parseFloat(card.interest_rate),
             billing_cycle_date: card.billing_cycle_date,
             status: card.status
         };
@@ -109,28 +136,75 @@ class CreditCardService {
             throw new Error("Credit card not found or unauthorized access");
         }
 
+        // Block payments on closed cards
+        if (card.status === 'closed') {
+            throw new Error("Cannot process payment: Card is permanently closed");
+        }
+
         const payment = parseFloat(payment_amount);
 
+        const previousBalance = parseFloat(card.outstanding_balance);
+
+        // Capture penalty state BEFORE any changes
+        const hadPenaltyBefore = card.penalty_applied === true;
+
+        // Guard: payment must be positive
+        if (payment <= 0) {
+            throw new Error("Payment amount must be greater than zero");
+        }
+
+        // Guard: payment cannot exceed outstanding balance
+        if (payment > previousBalance) {
+            throw new Error(`Payment amount ₹${payment} exceeds outstanding balance ₹${previousBalance.toFixed(2)}`);
+        }
+
         // Math: Reduce balance, restore available limit
-        card.outstanding_balance = parseFloat(card.outstanding_balance) - payment;
+        card.outstanding_balance = previousBalance - payment;
         card.available_limit = parseFloat(card.available_limit) + payment;
+
+        /**
+         * If balance fully cleared → reset penalty flag + advance due date 30 days
+         * If partial payment → keep penalty_applied as-is, due date unchanged
+         */
+        if (card.outstanding_balance <= 0) {
+            card.outstanding_balance = 0;
+            card.available_limit = parseFloat(card.credit_limit); // Restore full limit
+            card.penalty_applied = false;
+            card.minimum_due = 0;
+            const nextDue = new Date();
+            nextDue.setDate(nextDue.getDate() + 30);
+            card.due_date = nextDue.toISOString().split('T')[0];
+        }
 
         await card.save();
 
         return {
             card_id: card.card_id,
             payment_applied: payment,
-            new_outstanding_balance: card.outstanding_balance,
-            restored_available_limit: card.available_limit
+            previous_balance: previousBalance,
+            new_outstanding_balance: parseFloat(card.outstanding_balance),
+            restored_available_limit: parseFloat(card.available_limit),
+            penalty_cleared: hadPenaltyBefore && card.penalty_applied === false,
+            next_due_date: card.due_date
         };
     }
 
-    // MISSING FUNCTION ADDED: Block Customer Card
+    //Block Customer Card
     async updateCardStatus(card_id, status) {
         const card = await CreditCard.findOne({ where: { card_id } });
 
         if (!card) {
             throw new Error("Credit card not found");
+        }
+
+        // Block any action on already closed card
+        if (card.status === 'closed') {
+            throw new Error("Cannot modify card: Card is permanently closed");
+        }
+
+        // Block if already in requested status
+        if (card.status === status) {
+            throw new Error(`Card is already ${status}`);
         }
 
         card.status = status; // e.g., 'blocked'

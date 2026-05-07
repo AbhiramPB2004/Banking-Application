@@ -35,6 +35,13 @@ const authRoutes = require(
   "./Routes/auth.routes"
 );
 
+/**
+ * Import Credit Card Background Jobs Scheduler
+ */
+const initCreditCardJobs = require(
+  "../services/credit-card-service/jobs/scheduler"
+);
+
 const creditCardRoutes = require(
   "../services/credit-card-service/routes/creditCard.routes"
 );
@@ -88,6 +95,11 @@ sequelize
         `Gateway running on port ${PORT}`
       );
     });
+
+    /**
+     * Start background jobs after DB is ready
+     */
+    initCreditCardJobs();
   })
   .catch((err) => {
     console.error(

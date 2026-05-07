@@ -31,14 +31,25 @@ exports.applyNewCard = async (req, res) => {
          * Identity trust enforcement: 
          * Merge the trusted database facts with the application body.
          */
+        // Calculate age from dob stored in user profile
+        const dob = new Date(userProfile.dob);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
         const cardData = {
             ...req.body,
-            user_id: req.user.user_id, // Security: derive identity from token, not body
-            source_account_id: userAccount ? userAccount.account_id : undefined, // Automated link
-            kyc_status: userProfile.kyc_status, // Real KYC from DB
+            user_id: req.user.user_id,           // Security: derive identity from token, not body
+            source_account_id: userAccount ? userAccount.account_id : undefined,
+            kyc_status: userProfile.kyc_status,  // Real KYC from DB
             annual_income: userProfile.annual_income, // Real Income from DB
-            occupation: userProfile.occupation, // Real Occupation from DB
-            existing_liabilities: req.body.existing_liabilities || 0 // Default to 0
+            occupation: userProfile.occupation,  // Real Occupation from DB
+            existing_liabilities: req.body.existing_liabilities || 0,
+            age: age,                            // Calculated from DB dob, not user input
+            card_tier: req.body.card_tier || 'entry' // 'entry' or 'premium', default entry
         };
         
         const result = await creditCardService.applyForCreditCard(cardData);
@@ -123,6 +134,14 @@ module.exports = {
     blockCustomerCard: exports.blockCustomerCard,
     // Add these placeholders so your routes don't crash 
     // until you write the logic in the service
-    closeCard: async (req, res) => res.status(501).json({ message: "Not Implemented" }),
+    closeCard: async (req, res) => {
+        try {
+            const cardId = req.params.id;
+            const result = await creditCardService.updateCardStatus(cardId, 'closed');
+            return res.status(200).json(responseFormatter.success(result, "Card closed successfully"));
+        } catch (error) {
+            return res.status(400).json(responseFormatter.error(error.message));
+        }
+    },
     generateCardStatement: async (req, res) => res.status(501).json({ message: "Not Implemented" })
 };
