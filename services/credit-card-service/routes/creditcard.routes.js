@@ -26,13 +26,18 @@ router.post(
   creditCardController.applyNewCard
 );
 
-/**
- * Retrieve all cards for the user
- * GET /credit-cards/user/me
- */
 router.get(
   "/user/me",
   creditCardController.getUserCards
+);
+
+/**
+ * Generate statement
+ * GET /credit-cards/statement/:id
+ */
+router.get(
+  "/statement/:id",
+  creditCardController.generateCardStatement
 );
 
 /**
@@ -72,7 +77,17 @@ router.patch(
 );
 
 /**
- * Close card
+ * Unblock card
+ * PATCH /credit-cards/unblock/:id
+ */
+router.patch(
+  "/unblock/:id",
+  creditCardController.unblockCustomerCard
+);
+
+/**
+ * Close card (soft-delete — status → 'closed')
+ * Requires zero outstanding balance.
  * PATCH /credit-cards/close/:id
  */
 router.patch(
@@ -81,12 +96,13 @@ router.patch(
 );
 
 /**
- * Generate statement
- * GET /credit-cards/statement/:id
+ * Hard-delete a closed card record.
+ * Card must already be in 'closed' status with zero balance.
+ * DELETE /credit-cards/:id
  */
-router.get(
-  "/statement/:id",
-  creditCardController.generateCardStatement
+router.delete(
+  "/:id",
+  creditCardController.deleteCard
 );
 
 module.exports = router;

@@ -37,6 +37,8 @@ const {
   createEmailOtp,
   verifyEmailOtp,
   updatePassword,
+  getActiveSession,
+  revokeSession,
 } = require("../services/authService");
 
 const {
@@ -682,11 +684,135 @@ async function loginUser(req, res) {
   }
 }
 
+/**
+ * Refresh Token Handler
+ * POST /auth/refresh
+ *
+ * Reads the refresh_token from the httpOnly cookie.
+ * Validates it against the hashed value stored in the Session table.
+ * Issues a new access_token (15m) and rotates the refresh_token (7d).
+ * This is called automatically by the frontend when a 401 is received.
+ */
+async function refreshToken(req, res) {
+  try {
+    const token = req.cookies?.refresh_token;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "No refresh token provided. Please log in again."
+      });
+    }
+
+    // Decode without verifying first to get user_id for DB lookup
+    const { verifyRefreshToken } = require("../../../shared/utils/tokenUtils");
+    const result = verifyRefreshToken(token);
+
+    if (!result.valid) {
+      return res.status(401).json({
+        success: false,
+        message: result.expired
+          ? "Session expired. Please log in again."
+          : "Invalid refresh token. Please log in again."
+      });
+    }
+
+    const { user_id, email, role } = result.decoded;
+
+    // Validate against stored session hash
+    const session = await getActiveSession(user_id);
+
+    if (!session || !session.is_active) {
+      return res.status(401).json({
+        success: false,
+        message: "Session not found or revoked. Please log in again."
+      });
+    }
+
+    // Check session expiry
+    if (session.expires_at < new Date()) {
+      await revokeSession(user_id);
+      return res.status(401).json({
+        success: false,
+        message: "Session expired. Please log in again."
+      });
+    }
+
+    // Verify refresh token matches the stored hash
+    const tokenMatches = await bcrypt.compare(token, session.refresh_token_hash);
+    if (!tokenMatches) {
+      // Possible token reuse attack — revoke session immediately
+      await revokeSession(user_id);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid session. Please log in again."
+      });
+    }
+
+    // Issue new tokens (rotate refresh token)
+    const newTokens = generateUserTokens({ user_id, email, role });
+
+    // Persist rotated refresh token hash to DB
+    await createSession({
+      user_id,
+      refresh_token: newTokens.refresh_token,
+      device_info: req.headers['user-agent'] || 'unknown',
+      ip_address: req.ip,
+    });
+
+    // Set fresh cookies
+    setAuthCookies(res, newTokens);
+
+    return res.status(200).json({
+      success: true,
+      message: "Token refreshed successfully."
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Token refresh failed."
+    });
+  }
+}
+
+/**
+ * Logout Handler
+ * POST /auth/logout
+ *
+ * Revokes the server-side session and clears both cookies.
+ */
+async function logoutUser(req, res) {
+  try {
+    // If authenticated, revoke the session from DB
+    if (req.user?.user_id) {
+      await revokeSession(req.user.user_id);
+    }
+
+    // Clear cookies server-side (the correct, secure way)
+    const cookieOptions = getCookieOptions();
+    res.clearCookie('access_token', cookieOptions);
+    res.clearCookie('refresh_token', cookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully."
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed."
+    });
+  }
+}
+
 module.exports = {
   registerUser,
   verifyEmail,
   resendEmailVerificationOtp,
   requestPasswordReset,
   resetPassword,
-  loginUser
+  loginUser,
+  refreshToken,
+  logoutUser
 };

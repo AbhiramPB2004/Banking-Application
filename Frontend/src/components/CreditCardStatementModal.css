@@ -1,0 +1,132 @@
+.statement-modal {
+    background: linear-gradient(135deg, #1e1e2f 0%, #11111c 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: white;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    animation: slideUp 0.3s ease;
+}
+
+/* HEADER */
+.statement-modal .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.statement-modal .modal-header h2 {
+    color: white;
+    margin: 0;
+}
+
+.statement-modal .modal-header p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+}
+
+/* CARD BODY */
+.statement-card {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* ROW */
+.statement-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.statement-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+.statement-row span {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.9rem;
+}
+
+.statement-row strong {
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* HIGHLIGHTS */
+.statement-highlight {
+    color: #6366f1 !important;
+}
+
+.statement-warning {
+    color: #f59e0b !important;
+}
+
+.statement-success {
+    color: #22c55e !important;
+}
+
+.statement-danger {
+    color: #ef4444 !important;
+}
+
+/* MESSAGE */
+.statement-message {
+    margin: 0 1.5rem 1.5rem;
+    padding: 1rem 1.2rem;
+    border-radius: 14px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* FOOTER */
+.statement-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* CLOSE BUTTON */
+.statement-close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: white;
+    padding: 0.7rem 1.4rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+
+.statement-close-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+    .statement-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .statement-modal {
+        border-radius: 18px;
+    }
+
+    .statement-card {
+        padding: 1rem;
+    }
+}

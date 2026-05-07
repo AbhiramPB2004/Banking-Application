@@ -4,9 +4,33 @@
 const BASE_URL = '';  // CRA proxy handles forwarding to port 5000
 
 /**
- * Core fetch wrapper with error handling
+ * Silent token refresh
+ * Calls POST /auth/refresh which reads the httpOnly refresh_token cookie.
+ * Returns true if successful, false if session is fully expired.
  */
-async function request(endpoint, options = {}) {
+async function silentRefresh() {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Core fetch wrapper with automatic 401 → refresh → retry logic.
+ *
+ * Flow:
+ *  1. Make the API call.
+ *  2. If 401 and not already retrying → call /auth/refresh silently.
+ *  3. If refresh succeeds → retry the original request once.
+ *  4. If refresh fails (expired session) → dispatch 'auth:logout' event
+ *     so AuthContext can force the user to the login screen.
+ */
+async function request(endpoint, options = {}, _retry = false) {
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -17,6 +41,23 @@ async function request(endpoint, options = {}) {
   };
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
+
+  // Silent token refresh on 401
+  if (response.status === 401 && !_retry) {
+    const refreshed = await silentRefresh();
+
+    if (refreshed) {
+      // Retry the original request with fresh cookies
+      return request(endpoint, options, true);
+    } else {
+      // Refresh token is also expired — force logout
+      window.dispatchEvent(new Event('auth:logout'));
+      const error = new Error('Session expired. Please log in again.');
+      error.status = 401;
+      throw error;
+    }
+  }
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -67,6 +108,18 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify({ email, otp, new_password }),
     }),
+
+  /**
+   * Manually trigger a token refresh (not usually needed — api.js does it automatically)
+   */
+  refresh: () =>
+    fetch('/auth/refresh', { method: 'POST', credentials: 'include' }),
+
+  /**
+   * Server-side logout — clears cookies in the Set-Cookie header and revokes DB session
+   */
+  logout: () =>
+    fetch('/auth/logout', { method: 'POST', credentials: 'include' }),
 };
 
 // ─── User API ─────────────────────────────────────
@@ -158,6 +211,7 @@ export const loanAPI = {
 // ─── Credit Card API ─────────────────────────────────
 
 export const creditCardAPI = {
+
   getMyCards: () =>
     request('/credit-cards/user/me'),
 
@@ -183,8 +237,26 @@ export const creditCardAPI = {
     request(`/credit-cards/block/${id}`, {
       method: 'PATCH',
     }),
-};
 
+  /* NEW */
+  unblockCard: (id) =>
+    request(`/credit-cards/unblock/${id}`, {
+      method: 'PATCH',
+    }),
+
+  getStatement: (id) =>
+    request(`/credit-cards/statement/${id}`),
+
+  closeCard: (id) =>
+    request(`/credit-cards/close/${id}`, {
+      method: 'PATCH',
+    }),
+
+  deleteCard: (id) =>
+    request(`/credit-cards/${id}`, {
+      method: 'DELETE',
+    }),
+};
 // Investment API
 
 export const investmentAPI = {
@@ -247,4 +319,27 @@ export const fdAPI = {
   // Get FD interest rates
   getInterestRates: () =>
     request('/fd/interest-rates'),
+};
+
+export const transactionAPI = {
+  transfer: (data) =>
+    request('/transactions/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deposit: (data) =>
+    request('/transactions/deposit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  withdraw: (data) =>
+    request('/transactions/withdraw', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getHistory: (account_id) =>
+    request(`/transactions/history/${account_id}`),
 };
