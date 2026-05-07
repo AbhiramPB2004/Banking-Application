@@ -1,3 +1,4 @@
+const User = require("../../user-service/models/user.model");
 const Account = require("../models/account.model");
 const { sequelize } = require("../../../shared/config/db");
 
@@ -16,6 +17,22 @@ async function createAccount({
 
   // Normalize safely
   const normalizedType = account_type?.toLowerCase()?.trim();
+
+  // -------------------------
+  // KYC Verification
+  // -------------------------
+
+  const user = await User.findByPk(user_id);
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  if (user.kyc_status !== "verified") {
+    throw new Error(
+      "KYC verification required before account creation."
+    );
+  }
 
   // -------------------------
   // Account Count Validation
