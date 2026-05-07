@@ -17,9 +17,20 @@ class CreditCardService {
         const account = await accountService.getAccountByUserId(data.user_id);
         if (!account) throw new Error("Linked bank account not found");
 
-        // Calculate capped credit limit: 10% of balance or requested limit (whichever is lower)
-        const allowedLimit = account.balance * 0.10;
-        const finalLimit = Math.min(data.requested_limit, allowedLimit);
+        // 3. Limit Validation: Upper bound (10% of balance) and Lower bound (₹10,000)
+        const minLimit = 10000;
+        const maxAllowedLimit = parseFloat(account.balance) * 0.10;
+        const requested = parseFloat(data.requested_limit);
+
+        if (requested < minLimit) {
+            throw new Error(`Requested limit ₹${requested} is below the minimum allowed limit of ₹${minLimit}`);
+        }
+
+        if (requested > maxAllowedLimit) {
+            throw new Error(`Requested limit ₹${requested} exceeds your maximum eligible limit of ₹${maxAllowedLimit.toFixed(2)} (10% of account balance)`);
+        }
+
+        const finalLimit = requested;
 
         // Assign credit limit based on eligibility score and balance cap
         // Set first due date: 20 days from today
@@ -112,7 +123,7 @@ class CreditCardService {
 
         return {
             card_id: card.card_id,
-            card_number: card.card_number,
+            card_number: this.maskCardNumber(card.card_number),
             card_type: card.card_type,
             credit_limit: parseFloat(card.credit_limit),
             available_limit: parseFloat(card.available_limit),
@@ -189,12 +200,32 @@ class CreditCardService {
         };
     }
 
-    //Block Customer Card
-    async updateCardStatus(card_id, status) {
-        const card = await CreditCard.findOne({ where: { card_id } });
+    // Fetch all cards for a specific user
+    async getCardsByUserId(user_id) {
+        const cards = await CreditCard.findAll({
+            where: { user_id }
+        });
+
+        // Map to return safe data for each card
+        return cards.map(card => ({
+            card_id: card.card_id,
+            card_number: this.maskCardNumber(card.card_number),
+            card_type: card.card_type,
+            credit_limit: parseFloat(card.credit_limit),
+            available_limit: parseFloat(card.available_limit),
+            outstanding_balance: parseFloat(card.outstanding_balance),
+            status: card.status,
+            due_date: card.due_date
+        }));
+    }
+
+    //Block/Unblock/Close Customer Card
+    async updateCardStatus(card_id, user_id, status) {
+        // Enforce ownership check for status transitions
+        const card = await CreditCard.findOne({ where: { card_id, user_id } });
 
         if (!card) {
-            throw new Error("Credit card not found");
+            throw new Error("Credit card not found or unauthorized access");
         }
 
         // Block any action on already closed card
@@ -207,13 +238,41 @@ class CreditCardService {
             throw new Error(`Card is already ${status}`);
         }
 
-        card.status = status; // e.g., 'blocked'
+        card.status = status;
         await card.save();
 
         return {
             card_id: card.card_id,
             new_status: card.status
         };
+    }
+
+    // Generate a simple statement summary
+    async getCardStatement(card_id, user_id) {
+        const card = await CreditCard.findOne({ where: { card_id, user_id } });
+
+        if (!card) {
+            throw new Error("Credit card not found or unauthorized access");
+        }
+
+        return {
+            card_id: card.card_id,
+            card_number: this.maskCardNumber(card.card_number),
+            statement_date: new Date().toISOString().split('T')[0],
+            outstanding_balance: parseFloat(card.outstanding_balance),
+            available_limit: parseFloat(card.available_limit),
+            minimum_due: parseFloat(card.minimum_due),
+            due_date: card.due_date,
+            billing_cycle_date: card.billing_cycle_date,
+            status: card.status,
+            message: "Monthly statement summary compiled successfully"
+        };
+    }
+
+    // Helper: Mask all but last 4 digits of card number
+    maskCardNumber(cardNumber) {
+        if (!cardNumber || cardNumber.length < 4) return cardNumber;
+        return "**** **** **** " + cardNumber.slice(-4);
     }
 }
 

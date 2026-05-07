@@ -26,6 +26,11 @@ router.post(
   creditCardController.applyNewCard
 );
 
+router.get(
+  "/user/me",
+  creditCardController.getUserCards
+);
+
 /**
  * Generate statement
  * GET /credit-cards/statement/:id
@@ -69,6 +74,15 @@ router.post(
 router.patch(
   "/block/:id",
   creditCardController.blockCustomerCard
+);
+
+/**
+ * Unblock card
+ * PATCH /credit-cards/unblock/:id
+ */
+router.patch(
+  "/unblock/:id",
+  creditCardController.unblockCustomerCard
 );
 
 /**

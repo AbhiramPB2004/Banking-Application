@@ -50,6 +50,18 @@ const validateCreditCardInput = (data, type) => {
         }
     }
 
+    if (type === 'purchase') {
+        // 1. Amount: Must be positive
+        if (!data.amount || data.amount <= 0) {
+            errors.push("Transaction amount must be positive.");
+        }
+
+        // 2. Merchant: Required for tracking
+        if (!data.merchant || typeof data.merchant !== 'string') {
+            errors.push("Merchant name is required.");
+        }
+    }
+
     // Standardized Success/Failure Output
     return {
         valid: errors.length === 0,
