@@ -159,8 +159,11 @@ async function updateBalance(account_id, amount, operation) {
 
     let newBalance =
       operation === "credit"
-        ? current + amount
-        : current - amount;
+      ? current + amount
+      : current - amount;
+
+  // Fix floating-point precision
+  newBalance = parseFloat(newBalance.toFixed(2));
 
     if (newBalance < parseFloat(account.min_balance)) {
       throw new Error("Minimum balance violation.");
@@ -197,9 +200,11 @@ async function closeAccount(account_id, user_id) {
   }
 
   // 🔥 CRITICAL FIX
-  const balance = parseFloat(account.balance);
+  const balance = parseFloat(
+  parseFloat(account.balance).toFixed(2)
+);
 
-  if (balance > 0) {
+if (balance > 0) {
     throw new Error("Account balance must be zero before closure.");
   }
 
