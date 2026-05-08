@@ -2,7 +2,11 @@ const Account = require("../models/account.model");
 const { sequelize } = require("../../../shared/config/db");
 
 const { generateAccountNumber } = require("../../../shared/utils/accountNumberGenerator");
-
+const {
+  logAccountCreation,
+  logAccountUpdate,
+  logAccountClosure,
+} = require("../../audit-service/services/auditService");
 /**
  * Create new account
  */
@@ -24,14 +28,15 @@ async function createAccount({
     });
   } while (existingAccount);
 
-  return await Account.create({
+  try {
+
+  const account = await Account.create({
     user_id,
     account_number,
     account_type: account_type.toLowerCase(),
     branch_code,
     ifsc_code,
 
-    // ✅ MATCHES YOUR DB STRUCTURE
     balance: initial_deposit,
     available_balance: initial_deposit,
     min_balance: 1000,
@@ -39,6 +44,50 @@ async function createAccount({
     initial_deposit,
     status: "active",
   });
+
+
+
+  // ✅ ACCOUNT CREATION SUCCESS AUDIT
+  await logAccountCreation({
+    user_id,
+    account_id: account.account_id,
+    ip_address: null,
+
+    status: "success",
+
+    metadata: {
+      account_number: account.account_number,
+      account_type: account.account_type,
+      initial_deposit,
+    },
+  });
+
+
+
+  return account;
+
+} catch (error) {
+
+
+
+  // ❌ ACCOUNT CREATION FAILURE AUDIT
+  await logAccountCreation({
+    user_id,
+    account_id: null,
+    ip_address: null,
+
+    status: "failure",
+
+    metadata: {
+      error: error.message,
+      account_type,
+    },
+  });
+
+
+
+  throw error;
+}
 }
 
 /**
@@ -135,10 +184,53 @@ async function closeAccount(account_id, user_id) {
     throw new Error("Account balance must be zero before closure.");
   }
 
+  try {
+
   account.status = "closed";
+
   await account.save();
 
+
+
+  // ✅ ACCOUNT CLOSURE SUCCESS AUDIT
+  await logAccountClosure({
+    user_id,
+    account_id: account.account_id,
+    ip_address: null,
+
+    status: "success",
+
+    metadata: {
+      account_number: account.account_number,
+      remaining_balance: account.balance,
+    },
+  });
+
+
+
   return account;
+
+} catch(error) {
+
+
+
+  // ❌ ACCOUNT CLOSURE FAILURE AUDIT
+  await logAccountClosure({
+    user_id,
+    account_id,
+    ip_address: null,
+
+    status: "failure",
+
+    metadata: {
+      error: error.message,
+    },
+  });
+
+
+
+  throw error;
+}
 }
 
 /**
@@ -165,9 +257,55 @@ async function updateAccount(account_id, user_id, data) {
     account.account_type = data.account_type.toLowerCase();
   }
 
+  try {
+
+  if (data.account_type) {
+    account.account_type = data.account_type.toLowerCase();
+  }
+
   await account.save();
 
+
+
+  // ✅ ACCOUNT UPDATE SUCCESS AUDIT
+  await logAccountUpdate({
+    user_id,
+    account_id: account.account_id,
+    ip_address: null,
+
+    status: "success",
+
+    metadata: {
+      updated_fields: data,
+      account_type: account.account_type,
+    },
+  });
+
+
+
   return account;
+
+} catch(error) {
+
+
+
+  // ❌ ACCOUNT UPDATE FAILURE AUDIT
+  await logAccountUpdate({
+    user_id,
+    account_id,
+    ip_address: null,
+
+    status: "failure",
+
+    metadata: {
+      error: error.message,
+    },
+  });
+
+
+
+  throw error;
+}
 }
 
 module.exports = {

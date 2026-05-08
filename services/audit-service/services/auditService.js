@@ -155,7 +155,89 @@ async function logTransaction({
     metadata,
   });
 }
+/**
+ * Log account update event
+ */
+async function logAccountUpdate({
+  user_id,
+  account_id,
+  ip_address,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "account_update",
+    entity_type: "account",
+    entity_id: account_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
 
+/**
+ * Log account freeze event
+ */
+async function logAccountFreeze({
+  user_id,
+  account_id,
+  ip_address,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "account_freeze",
+    entity_type: "account",
+    entity_id: account_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
+/**
+ * Log account unfreeze event
+ */
+async function logAccountUnfreeze({
+  user_id,
+  account_id,
+  ip_address,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "account_unfreeze",
+    entity_type: "account",
+    entity_id: account_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
+/**
+ * Log account closure event
+ */
+async function logAccountClosure({
+  user_id,
+  account_id,
+  ip_address,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "account_closure",
+    entity_type: "account",
+    entity_id: account_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
 module.exports = {
   createAuditLog,
   getUserAuditLogs,
@@ -165,4 +247,8 @@ module.exports = {
   logSecurityEvent,
   logAccountCreation,
   logTransaction,
+  logAccountUpdate,
+  logAccountFreeze,
+  logAccountUnfreeze,
+  logAccountClosure,
 };
