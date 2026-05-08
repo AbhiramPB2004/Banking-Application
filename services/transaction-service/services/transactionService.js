@@ -2,7 +2,7 @@ const { sequelize } = require("../../../shared/config/db");
 const Account = require("../../account-service/models/account.model");
 const Transaction = require("../models/transaction.model");
 const { Op } = require("sequelize");
-
+const { logTransaction } = require("../../audit-service/services/auditService");
 /**
  * 🔐 OWNERSHIP VALIDATION
  */
@@ -99,10 +99,42 @@ async function processInternalTransfer({
     );
 
     await t.commit();
+    await logTransaction({
+  user_id,
+  transaction_id: txn.transaction_id,
+  action_type: "money_transfer",
+  ip_address: null,
+
+  status: "success",
+
+  metadata: {
+    amount,
+    from_account_number,
+    to_account_number,
+    transaction_type: "internal",
+    reference_id: txn.reference_id,
+  },
+});
     return txn;
 
   } catch (err) {
     await t.rollback();
+    // ❌ FAILURE AUDIT
+  await logTransaction({
+    user_id,
+    action_type: "money_transfer",
+    ip_address: null,
+
+    status: "failure",
+
+    metadata: {
+      amount,
+      from_account_number,
+      to_account_number,
+      error: err.message,
+      transaction_type: "internal",
+    },
+  });
     throw err;
   }
 }
@@ -176,10 +208,39 @@ async function depositMoney({ account_number, amount, user_id }) {
     );
 
     await t.commit();
+    // ✅ DEPOSIT SUCCESS AUDIT
+await logTransaction({
+  user_id,
+  transaction_id: txn.transaction_id,
+  action_type: "deposit",
+  ip_address: null,
+
+  status: "success",
+
+  metadata: {
+    amount,
+    account_number,
+    reference_id: txn.reference_id,
+  },
+});
     return txn;
 
   } catch (err) {
     await t.rollback();
+     // ❌ DEPOSIT FAILURE AUDIT
+  await logTransaction({
+    user_id,
+    action_type: "deposit",
+    ip_address: null,
+
+    status: "failure",
+
+    metadata: {
+      amount,
+      account_number,
+      error: err.message,
+    },
+  });
     throw err;
   }
 }
@@ -221,10 +282,39 @@ async function withdrawMoney({ account_number, amount, user_id }) {
     );
 
     await t.commit();
+    // ✅ WITHDRAW SUCCESS AUDIT
+await logTransaction({
+  user_id,
+  transaction_id: txn.transaction_id,
+  action_type: "withdraw",
+  ip_address: null,
+
+  status: "success",
+
+  metadata: {
+    amount,
+    account_number,
+    reference_id: txn.reference_id,
+  },
+});
     return txn;
 
   } catch (err) {
     await t.rollback();
+    // ❌ WITHDRAW FAILURE AUDIT
+  await logTransaction({
+    user_id,
+    action_type: "withdraw",
+    ip_address: null,
+
+    status: "failure",
+
+    metadata: {
+      amount,
+      account_number,
+      error: err.message,
+    },
+  });
     throw err;
   }
 }

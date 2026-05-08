@@ -134,6 +134,28 @@ async function logAccountCreation({
   });
 }
 
+/**
+ * Log transaction events
+ */
+async function logTransaction({
+  user_id,
+  transaction_id = null,
+  action_type,
+  ip_address = null,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type,
+    entity_type: "transaction",
+    entity_id: transaction_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
 module.exports = {
   createAuditLog,
   getUserAuditLogs,
@@ -142,4 +164,5 @@ module.exports = {
   logLogin,
   logSecurityEvent,
   logAccountCreation,
+  logTransaction,
 };
