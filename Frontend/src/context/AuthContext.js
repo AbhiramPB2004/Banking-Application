@@ -43,6 +43,20 @@ export function AuthProvider({ children }) {
   }, [checkAuth]);
 
   /**
+   * Listen for forced logout events dispatched by api.js
+   * when the refresh token itself is expired/invalid.
+   */
+  useEffect(() => {
+    const handleForcedLogout = () => {
+      setCurrentUser(null);
+      showToast('error', 'Your session has expired. Please log in again.');
+    };
+
+    window.addEventListener('auth:logout', handleForcedLogout);
+    return () => window.removeEventListener('auth:logout', handleForcedLogout);
+  }, [showToast]);
+
+  /**
    * Register a new user
    */
   const register = async (payload) => {
@@ -99,12 +113,15 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Logout — clear cookies by removing them client-side
+   * Logout — calls server-side endpoint to clear httpOnly cookies and revoke DB session.
+   * Client-side cookie manipulation won't work for httpOnly cookies.
    */
-  const logout = () => {
-    // Clear cookies
-    document.cookie = 'access_token=; Max-Age=0; path=/;';
-    document.cookie = 'refresh_token=; Max-Age=0; path=/;';
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } catch {
+      // best-effort — even if server fails, clear local state
+    }
     setCurrentUser(null);
     showToast('info', 'You have been logged out safely.');
   };

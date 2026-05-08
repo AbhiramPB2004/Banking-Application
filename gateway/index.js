@@ -42,6 +42,15 @@ const userRoutes = require("./Routes/user.routes");
 const accountRoutes = require(
   "../services/account-service/routes/account.routes"
 );
+const adminRoutes = require(
+  "../services/admin-service/routes/admin.routes"
+);
+
+app.use(
+  "/admin",
+  authenticateToken,
+  adminRoutes
+);
 const transactionRoutes = require("../services/transaction-service/routes/transaction.routes");
 const loanRoutes = require("../services/loan-service/routes/loan.routes");
 const investmentRoutes = require(

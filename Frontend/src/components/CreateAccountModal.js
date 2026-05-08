@@ -41,9 +41,19 @@ const CreateAccountModal = ({ onClose, onSuccess }) => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    if (!amount) return '₹0';
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '500px' }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Open New Account</h2>
           <button className="btn-close" onClick={onClose} disabled={isLoading}>
@@ -52,14 +62,17 @@ const CreateAccountModal = ({ onClose, onSuccess }) => {
         </div>
 
         {error && (
-          <div className="alert alert-danger" style={{ whiteSpace: 'pre-line', marginBottom: '1.5rem' }}>
+          <div className="alert alert-danger">
+            <i className="fas fa-exclamation-circle"></i>
             {error}
           </div>
         )}
 
         <form className="create-account-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Account Type</label>
+            <label>
+              <i className="fas fa-university"></i> Account Type
+            </label>
             <select name="account_type" value={formData.account_type} onChange={handleChange} required>
               <option value="savings">Savings Account</option>
               <option value="current">Current Account</option>
@@ -68,7 +81,9 @@ const CreateAccountModal = ({ onClose, onSuccess }) => {
           </div>
 
           <div className="form-group">
-            <label>Initial Deposit</label>
+            <label>
+              <i className="fas fa-rupee-sign"></i> Initial Deposit
+            </label>
             <div className="ca-input-with-icon">
               <span className="ca-input-icon">₹</span>
               <input
@@ -76,23 +91,26 @@ const CreateAccountModal = ({ onClose, onSuccess }) => {
                 name="initial_deposit"
                 value={formData.initial_deposit}
                 onChange={handleChange}
-                placeholder="e.g. 5000"
+                placeholder="Enter initial deposit amount"
                 required
                 min="1000"
+                step="1000"
               />
             </div>
-            <small style={{color:'var(--text-secondary)', fontSize:'0.75rem'}}>Minimum ₹1,000 required to open an account</small>
+            <small>
+              <i className="fas fa-info-circle"></i> Minimum ₹1,000 required to open an account
+            </small>
           </div>
 
           <div className="ca-modal-actions">
             <button type="button" className="ca-btn-cancel" onClick={onClose} disabled={isLoading}>
-              Cancel
+              <i className="fas fa-times"></i> Cancel
             </button>
             <button type="submit" className="ca-btn-submit" disabled={isLoading}>
               {isLoading ? (
                 <><i className="fas fa-spinner fa-spin"></i> Processing...</>
               ) : (
-                <>Open Account <i className="fas fa-plus-circle"></i></>
+                <><i className="fas fa-plus-circle"></i> Open Account</>
               )}
             </button>
           </div>

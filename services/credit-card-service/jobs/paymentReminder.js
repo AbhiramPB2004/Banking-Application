@@ -4,8 +4,18 @@
  */
 const { Op } = require('sequelize');
 const CreditCard = require('../models/creditcard.model'); 
-const notificationService = require('../../notification-service/services/notificationService'); 
 const logger = require('../../../shared/utils/logger'); 
+
+let notificationService;
+try {
+    notificationService = require('../../notification-service/services/notificationService');
+} catch (error) {
+    notificationService = {
+        sendCreditCardReminder: async (data) => {
+            logger.info(`[STUB] Notification Service unavailable. Reminder for user ${data.user_id} logic bypassed.`);
+        }
+    };
+}
 const runPaymentReminders = async () => {
     try {
         const today = new Date();

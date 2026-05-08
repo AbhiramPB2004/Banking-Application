@@ -18,6 +18,7 @@ import InvestmentsPage from './components/InvestmentsPage';
 import AdminPanel from './components/AdminPanel';
 import RegisterModal from './components/RegisterModal';
 import LoginModal from './components/LoginModal';
+import TransactionsPage from './components/TransactionsPage';
 
 function AppContent() {
   const { isLoggedIn, isLoading, toast } = useAuth();
@@ -113,6 +114,14 @@ function AppContent() {
           <ProtectedRoute>
             <div className="app-layout"><div className="main-content animate-fade">
               <InvestmentsPage />
+            </div></div>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/transactions" element={
+          <ProtectedRoute>
+            <div className="app-layout"><div className="main-content animate-fade">
+              <TransactionsPage />
             </div></div>
           </ProtectedRoute>
         } />
