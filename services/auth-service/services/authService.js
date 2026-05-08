@@ -1,6 +1,7 @@
 // /services/auth-service/services/authService.js
 
 const Session = require("../models/session.model");
+const EmailOtp = require("../models/emailOtp.model");
 const bcrypt = require("bcrypt");
 const User = require("../../user-service/models/user.model");
 
@@ -16,6 +17,12 @@ const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../../../shared/utils/tokenUtils");
+
+function generateNumericOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+
 
 /**
  * LOGIN USER (ADD THIS FUNCTION)
@@ -101,6 +108,92 @@ async function createSession({
   return session;
 }
 
+async function createEmailOtp({
+  user_id,
+  email,
+  purpose,
+  expiresInMinutes = 10,
+}) {
+  await EmailOtp.update(
+    { status: "expired" },
+    {
+      where: {
+        user_id,
+        purpose,
+        status: "active",
+      },
+    }
+  );
+
+  const otp = generateNumericOtp();
+  const otp_hash = await bcrypt.hash(otp, 10);
+  const expires_at = new Date();
+  expires_at.setMinutes(expires_at.getMinutes() + expiresInMinutes);
+
+  await EmailOtp.create({
+    user_id,
+    email,
+    purpose,
+    otp_hash,
+    expires_at,
+    status: "active",
+  });
+
+  return {
+    otp,
+    expires_at,
+  };
+}
+
+async function verifyEmailOtp({ email, otp, purpose }) {
+  const record = await EmailOtp.findOne({
+    where: {
+      email,
+      purpose,
+      status: "active",
+    },
+    order: [["created_at", "DESC"]],
+  });
+
+  if (!record) {
+    throw new Error("Invalid or expired OTP.");
+  }
+
+  if (record.expires_at < new Date()) {
+    record.status = "expired";
+    await record.save();
+    throw new Error("Invalid or expired OTP.");
+  }
+
+  if (record.attempts >= 5) {
+    record.status = "expired";
+    await record.save();
+    throw new Error("Too many OTP attempts. Please request a new OTP.");
+  }
+
+  const matches = await bcrypt.compare(otp, record.otp_hash);
+
+  if (!matches) {
+    record.attempts += 1;
+    await record.save();
+    throw new Error("Invalid or expired OTP.");
+  }
+
+  record.status = "consumed";
+  record.consumed_at = new Date();
+  await record.save();
+
+  return record;
+}
+
+async function updatePassword(user, newPassword) {
+  user.password_hash = await hashPassword(newPassword);
+  await user.save();
+  await revokeSession(user.user_id);
+
+  return true;
+}
+
 /**
  * Generate secure auth tokens
  */
@@ -146,6 +239,9 @@ async function getActiveSession(user_id) {
 module.exports = {
   prepareUserCredentials,
   createSession,
+  createEmailOtp,
+  verifyEmailOtp,
+  updatePassword,
   generateUserTokens,
   revokeSession,
   getActiveSession,

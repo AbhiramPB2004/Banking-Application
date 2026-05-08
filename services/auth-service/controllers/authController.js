@@ -1,7 +1,10 @@
 // /services/auth-service/controllers/authController.js
-
-const { sequelize } = require("../../../shared/config/db");
-
+const bcrypt = require("bcrypt");
+const Account = require("../../account-service/models/account.model");
+const {
+  validateLoginInput,
+} = require("../validators/loginValidator");
+// const notificationService = require("../../notification-service/services/notification.service");
 const {
   validateAuthInput,
 } = require("../validators/authValidator");
@@ -14,10 +17,13 @@ const {
   validateAccountInput,
 } = require("../../account-service/validators/accountValidator");
 
+const notificationService = require("../../notification-service/services/notification.service");
+
 const {
   checkExistingUser,
   createUser,
   activateUser,
+  getUserByEmail
 } = require("../../user-service/services/userService");
 
 const {
@@ -28,31 +34,77 @@ const {
   prepareUserCredentials,
   generateUserTokens,
   createSession,
+  createEmailOtp,
+  verifyEmailOtp,
+  updatePassword,
 } = require("../services/authService");
+
+const {
+  validatePassword,
+} = require("../../../shared/security/passwordPolicy");
 
 const {
   logRegistration,
   logAccountCreation,
   logLogin,
+  logSecurityEvent
 } = require("../../audit-service/services/auditService");
+
+function getCookieOptions() {
+  return {
+    httpOnly: true,
+    secure:
+      process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+  };
+}
+
+function setAuthCookies(res, tokens) {
+  const cookieOptions = getCookieOptions();
+
+  res.cookie(
+    "access_token",
+    tokens.access_token,
+    {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000,
+    }
+  );
+
+  res.cookie(
+    "refresh_token",
+    tokens.refresh_token,
+    {
+      ...cookieOptions,
+      maxAge:
+        7 * 24 * 60 * 60 * 1000,
+    }
+  );
+}
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
 
 /**
  * User Registration Controller
+ *
+ * Security:
+ * - Access token → HTTP-only cookie
+ * - Refresh token → HTTP-only cookie
+ * - No token exposure in JSON body
  */
 async function registerUser(req, res) {
-console.log(process.env.DB_PASSWORD);
-  const transaction = await sequelize.transaction();
-
   try {
-    const {
-      auth,
-      user,
-      account,
-    } = req.body;
+    const { auth, user, account } = req.body;
 
-    // ---------------------------
-    // Step 1: Validate Inputs
-    // ---------------------------
+    if (auth?.email) {
+      auth.email = normalizeEmail(auth.email);
+    }
+
+    /**
+     * Step 1: Validate Inputs
+     */
     const authValidation = validateAuthInput(auth);
     const userValidation = validateUserInput(user);
     const accountValidation = validateAccountInput(account);
@@ -64,17 +116,15 @@ console.log(process.env.DB_PASSWORD);
     ];
 
     if (validationErrors.length > 0) {
-      await transaction.rollback();
-
       return res.status(400).json({
         success: false,
         errors: validationErrors,
       });
     }
 
-    // ---------------------------
-    // Step 2: Check Existing User
-    // ---------------------------
+    /**
+     * Step 2: Check Existing User
+     */
     const existingUser = await checkExistingUser({
       email: auth.email,
       phone: auth.phone,
@@ -83,8 +133,6 @@ console.log(process.env.DB_PASSWORD);
     });
 
     if (existingUser) {
-      await transaction.rollback();
-
       return res.status(409).json({
         success: false,
         message:
@@ -92,9 +140,9 @@ console.log(process.env.DB_PASSWORD);
       });
     }
 
-    // ---------------------------
-    // Step 3: Hash Credentials
-    // ---------------------------
+    /**
+     * Step 3: Hash Credentials
+     */
     const {
       password_hash,
       transaction_pin_hash,
@@ -103,9 +151,9 @@ console.log(process.env.DB_PASSWORD);
       auth.transaction_pin
     );
 
-    // ---------------------------
-    // Step 4: Create User
-    // ---------------------------
+    /**
+     * Step 4: Create User
+     */
     const newUser = await createUser({
       ...auth,
       ...user,
@@ -113,38 +161,35 @@ console.log(process.env.DB_PASSWORD);
       transaction_pin_hash,
     });
 
-    // ---------------------------
-    // Step 5: Create Account
-    // ---------------------------
+    /**
+     * Step 5: Create Account
+     */
+    // console.log(account)
     const newAccount = await createAccount({
       user_id: newUser.user_id,
       account_type: account.account_type,
       initial_deposit: account.initial_deposit,
+      branch_code: account.branch_code,
+      ifsc_code: account.ifsc_code,
     });
 
-    // ---------------------------
-    // Step 6: Activate User
-    // ---------------------------
-    await activateUser(newUser.user_id);
+    newAccount.status = "pending";
+    await newAccount.save();
 
-    // ---------------------------
-    // Step 7: Generate Tokens
-    // ---------------------------
-    const tokens = generateUserTokens(newUser);
-
-    // ---------------------------
-    // Step 8: Create Session
-    // ---------------------------
-    await createSession({
+    const otpData = await createEmailOtp({
       user_id: newUser.user_id,
-      refresh_token: tokens.refresh_token,
-      device_info: req.headers["user-agent"] || "Unknown Device",
-      ip_address: req.ip,
+      email: newUser.email,
+      purpose: "email_verification",
     });
 
-    // ---------------------------
-    // Step 9: Audit Logs
-    // ---------------------------
+    await notificationService.notifyEmailVerificationOtp(
+      newUser,
+      otpData.otp
+    );
+
+    /**
+     * Step 9: Audit Logs
+     */
     await logRegistration({
       user_id: newUser.user_id,
       ip_address: req.ip,
@@ -164,88 +209,476 @@ console.log(process.env.DB_PASSWORD);
       },
     });
 
-    // ---------------------------
-    // Step 10: Commit Transaction
-    // ---------------------------
-    await transaction.commit();
-
-    // ---------------------------
-    // Step 11: Success Response
-    // ---------------------------
+    /**
+     * Step 11: Success Response
+     */
     return res.status(201).json({
       success: true,
-      message: "User registered successfully.",
+      message: "Registration successful. Please verify your email OTP to activate your account.",
+      requires_email_verification: true,
       user: {
         user_id: newUser.user_id,
         full_name: newUser.full_name,
         email: newUser.email,
         phone: newUser.phone,
-        status: "active",
+        status: "pending",
       },
       account: {
         account_id: newAccount.account_id,
-        account_number: newAccount.account_number,
-        account_type: newAccount.account_type,
+        account_number:
+          newAccount.account_number,
+        account_type:
+          newAccount.account_type,
         balance: newAccount.balance,
+        status: newAccount.status,
       },
-      tokens,
     });
   } catch (error) {
-await transaction.rollback();
+    console.error(
+      "Registration Error:",
+      error
+    );
 
-console.error("Registration Error:", error);
-
-// Sequelize validation failures
-if (error.name === "SequelizeValidationError") {
-  return res.status(400).json({
-    success: false,
-    message: "Validation failed.",
-    errors: error.errors.map((err) => ({
-      field: err.path,
-      message: err.message,
-    })),
-  });
+    return res.status(500).json({
+      success: false,
+      message:
+        "Internal server error during registration.",
+      error:
+        process.env.NODE_ENV ===
+        "development"
+          ? error.message
+          : undefined,
+    });
+  }
 }
 
-// Sequelize unique constraint failures
-if (error.name === "SequelizeUniqueConstraintError") {
-  return res.status(409).json({
-    success: false,
-    message: "Duplicate field detected.",
-    errors: error.errors.map((err) => ({
-      field: err.path,
-      message: `${err.path} already exists.`,
-    })),
-  });
+async function verifyEmail(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required.",
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified.",
+      });
+    }
+
+    await verifyEmailOtp({
+      email,
+      otp,
+      purpose: "email_verification",
+    });
+
+    const activatedUser = await activateUser(user.user_id);
+
+    await Account.update(
+      { status: "active" },
+      {
+        where: {
+          user_id: user.user_id,
+          status: "pending",
+        },
+      }
+    );
+
+    const tokens = generateUserTokens(activatedUser);
+
+    await createSession({
+      user_id: activatedUser.user_id,
+      refresh_token: tokens.refresh_token,
+      device_info:
+        req.headers["user-agent"] || "Unknown Device",
+      ip_address: req.ip,
+    });
+
+    setAuthCookies(res, tokens);
+
+    await notificationService.notifyRegister(activatedUser);
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified and account activated successfully.",
+      user: {
+        user_id: activatedUser.user_id,
+        full_name: activatedUser.full_name,
+        email: activatedUser.email,
+        role: activatedUser.role,
+        status: activatedUser.status,
+      },
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
 }
 
-// Foreign key / relational failures
-if (error.name === "SequelizeForeignKeyConstraintError") {
-  return res.status(400).json({
-    success: false,
-    message: "Related resource validation failed.",
-    error: error.message,
-  });
+async function resendEmailVerificationOtp(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified.",
+      });
+    }
+
+    const otpData = await createEmailOtp({
+      user_id: user.user_id,
+      email: user.email,
+      purpose: "email_verification",
+    });
+
+    await notificationService.notifyEmailVerificationOtp(
+      user,
+      otpData.otp
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification OTP sent successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 }
 
-// Database connection or query failures
-if (error.name === "SequelizeDatabaseError") {
-  return res.status(500).json({
-    success: false,
-    message: "Database operation failed.",
-    error: error.message,
-  });
+async function requestPasswordReset(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (user && user.status === "active") {
+      const otpData = await createEmailOtp({
+        user_id: user.user_id,
+        email: user.email,
+        purpose: "password_reset",
+      });
+
+      await notificationService.notifyPasswordResetOtp(
+        user,
+        otpData.otp
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "If the email is registered, a password reset OTP has been sent.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Unable to process password reset request.",
+    });
+  }
 }
 
-// Generic fallback
-return res.status(500).json({
-  success: false,
-  message: "Internal server error during registration.",
-  error:
-    process.env.NODE_ENV === "development"
-      ? error.message
-      : undefined,
-});
+async function resetPassword(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+    const newPassword = req.body.new_password;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP, and new password are required.",
+      });
+    }
+
+    const passwordValidation = validatePassword(newPassword);
+
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: passwordValidation.message,
+      });
+    }
+
+    const user = await getUserByEmail(email);
+
+    if (!user || user.status !== "active") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid password reset request.",
+      });
+    }
+
+    await verifyEmailOtp({
+      email,
+      otp,
+      purpose: "password_reset",
+    });
+
+    await updatePassword(user, newPassword);
+
+    await logSecurityEvent({
+      user_id: user.user_id,
+      action_type: "password_reset",
+      entity_id: user.user_id,
+      ip_address: req.ip,
+      status: "success",
+      metadata: {
+        email: user.email,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. Please log in again.",
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
+/**
+ * User Login Controller
+ *
+ * Handles:
+ * - User authentication
+ * - Password verification
+ * - JWT generation
+ * - Session replacement
+ * - Secure cookie token delivery
+ * - Audit logging
+ */
+async function loginUser(req, res) {
+  try {
+    const { password } = req.body;
+    const email = normalizeEmail(req.body.email);
+
+    /**
+     * Step 1: Validate Input
+     */
+    const validation =
+      validateLoginInput({
+        email,
+        password,
+      });
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.errors,
+      });
+    }
+
+    /**
+     * Step 2: Find User
+     */
+    const user =
+      await getUserByEmail(email);
+
+    if (!user) {
+      await logSecurityEvent({
+        action_type:
+          "login_failed",
+        ip_address: req.ip,
+        status: "failure",
+        metadata: {
+          email,
+          reason:
+            "User not found",
+        },
+      });
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid credentials.",
+      });
+    }
+
+    /**
+     * Step 3: Verify Password
+     */
+    const passwordMatch =
+      await bcrypt.compare(
+        password,
+        user.password_hash
+      );
+
+    if (!passwordMatch) {
+      await logSecurityEvent({
+        user_id:
+          user.user_id,
+        action_type:
+          "login_failed",
+        entity_id:
+          user.user_id,
+        ip_address:
+          req.ip,
+        status:
+          "failure",
+        metadata: {
+          reason:
+            "Incorrect password",
+        },
+      });
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid credentials.",
+      });
+    }
+
+    /**
+     * Step 4: Verify Account Status
+     */
+    if (
+      user.status !==
+      "active"
+    ) {
+      if (user.status === "pending") {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Please verify your email OTP before logging in.",
+          requires_email_verification: true,
+        });
+      }
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "User account is not active.",
+      });
+    }
+
+    /**
+     * Step 5: Generate JWT Tokens
+     */
+    const tokens =
+      generateUserTokens(
+        user
+      );
+
+    /**
+     * Step 6: Replace Previous Session
+     */
+    await createSession({
+      user_id:
+        user.user_id,
+      refresh_token:
+        tokens.refresh_token,
+      device_info:
+        req.headers[
+          "user-agent"
+        ] ||
+        "Unknown Device",
+      ip_address:
+        req.ip,
+    });
+
+    /**
+     * Step 7: Set Secure Cookies
+     */
+    setAuthCookies(res, tokens);
+    await notificationService.notifyLogin(user, req.ip);
+    /**
+     * Step 8: Audit Success
+     */
+    await logLogin({
+      user_id:
+        user.user_id,
+      ip_address:
+        req.ip,
+      status:
+        "success",
+      metadata: {
+        email:
+          user.email,
+      },
+    });
+
+    /**
+     * Step 9: Success Response
+     */
+    return res.status(200).json({
+      success: true,
+      message:
+        "Login successful.",
+      user: {
+        user_id:
+          user.user_id,
+        full_name:
+          user.full_name,
+        email:
+          user.email,
+        role:
+          user.role,
+        status:
+          user.status,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Login Error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Internal server error during login.",
+      error:
+        process.env
+          .NODE_ENV ===
+        "development"
+          ? error.message
+          : undefined,
+    });
   }
 }
 /**
@@ -337,5 +770,9 @@ const isValid = await bcrypt.compare(
 }
 module.exports = {
   registerUser,
+  verifyEmail,
+  resendEmailVerificationOtp,
+  requestPasswordReset,
+  resetPassword,
   loginUser
 };

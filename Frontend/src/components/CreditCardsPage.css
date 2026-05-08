@@ -1,0 +1,167 @@
+.cc-page {
+  animation: slideUp 0.4s ease;
+}
+
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+/* Premium Physical Card Styling */
+.cc-card-item {
+  background: linear-gradient(135deg, #1e1e2f 0%, #11111c 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-card-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2);
+}
+
+/* Shine Effect */
+.cc-card-item::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-25deg);
+  animation: shine 6s infinite;
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+
+.cc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.cc-chip {
+  width: 45px;
+  height: 35px;
+  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+  border-radius: 6px;
+  opacity: 0.9;
+}
+
+.cc-brand {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: white;
+  font-style: italic;
+}
+
+.cc-number {
+  font-size: 1.6rem;
+  letter-spacing: 4px;
+  color: white;
+  font-family: 'Courier New', Courier, monospace;
+  margin-bottom: 2rem;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.cc-details-row {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1rem;
+}
+
+.cc-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-stat label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.25rem;
+}
+
+.cc-stat span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.cc-stat .accent {
+  color: #6366f1;
+}
+
+.cc-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.cc-btn {
+  flex: 1;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cc-btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.cc-btn-primary:hover {
+  background: var(--primary-light);
+}
+
+.cc-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.cc-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.cc-btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.cc-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.status-badge.blocked {
+  position: absolute;
+  top: 1rem; left: 1rem;
+  background: #ef4444;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: 10;
+}

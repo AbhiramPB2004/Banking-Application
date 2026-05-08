@@ -1,24 +1,21 @@
-// /services/account-service/validators/accountValidator.js
-
 function validateAccountInput(data) {
   const errors = [];
 
-  // Account Type
-  const allowedAccountTypes = ["savings", "current", "salary"];
-  if (
-    !data.account_type ||
-    !allowedAccountTypes.includes(data.account_type.toLowerCase())
-  ) {
-    errors.push("Valid account type is required.");
+  if (!data.account_type) {
+    errors.push("Account type is required.");
   }
 
-  // Initial Deposit
-  if (
-    !data.initial_deposit ||
-    isNaN(data.initial_deposit) ||
-    Number(data.initial_deposit) < 1000
-  ) {
-    errors.push("Initial deposit must be at least ₹1000.");
+  const validTypes = ["savings", "current", "salary"];
+  if (!validTypes.includes(data.account_type)) {
+    errors.push("Invalid account type.");
+  }
+
+  if (!data.initial_deposit || data.initial_deposit <= 0) {
+    errors.push("Initial deposit must be a positive number.");
+  }
+
+  if (data.initial_deposit < 1000) {
+    errors.push("Minimum deposit must be at least ₹1000.");
   }
 
   return {
