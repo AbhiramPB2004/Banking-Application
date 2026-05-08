@@ -1,37 +1,83 @@
 import React, { useState } from 'react';
 import { creditCardAPI } from '../api/api';
 
-const CardActionModal = ({ type, card, onClose, onSuccess }) => {
-  const [amount, setAmount] = useState('');
+const CardActionModal = ({
+  type,
+  card,
+  onClose,
+  onSuccess
+}) => {
+
+  const [formData, setFormData] = useState({
+    amount: '',
+    merchant: ''
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const isPurchase = type === 'purchase';
+  const isPayment = type === 'payment';
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setIsLoading(true);
     setError('');
 
     try {
+
       let res;
+
+      /**
+       * PURCHASE FLOW
+       */
       if (isPurchase) {
-        res = await creditCardAPI.processPurchase({
+
+        const payload = {
           card_id: card.card_id,
-          amount: Number(amount)
-        });
-      } else {
-        res = await creditCardAPI.makePayment({
+          amount: Number(formData.amount),
+          merchant: formData.merchant
+        };
+
+        res = await creditCardAPI.processPurchase(payload);
+      }
+
+      /**
+       * PAYMENT FLOW
+       */
+      if (isPayment) {
+
+        const payload = {
           card_id: card.card_id,
-          payment_amount: Number(amount)
-        });
+          payment_amount: Number(formData.amount)
+        };
+
+        res = await creditCardAPI.makePayment(payload);
       }
 
       if (res.success) {
         onSuccess();
+        onClose();
       }
+
     } catch (err) {
-      setError(err.data?.message || err.message || 'Action failed');
+
+      setError(
+        err.data?.message ||
+        err.message ||
+        'Transaction failed'
+      );
+
     } finally {
       setIsLoading(false);
     }
@@ -39,70 +85,185 @@ const CardActionModal = ({ type, card, onClose, onSuccess }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '450px' }}>
+
+      <div
+        className="modal-content"
+        style={{ maxWidth: '500px' }}
+      >
+
+        {/* HEADER */}
         <div className="modal-header">
-          <h2>{isPurchase ? 'Simulate Purchase' : 'Pay Credit Card Bill'}</h2>
-          <button className="btn-close" onClick={onClose} disabled={isLoading}>
+
+          <h2>
+            {isPurchase
+              ? 'Simulate Purchase'
+              : 'Make Payment'}
+          </h2>
+
+          <button
+            className="btn-close"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             <i className="fas fa-times"></i>
           </button>
+
         </div>
 
+        {/* ERROR */}
         {error && (
-          <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
+          <div
+            className="alert alert-danger"
+            style={{
+              marginBottom: '1rem',
+              whiteSpace: 'pre-line'
+            }}
+          >
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
-              {isPurchase ? 'Purchase Amount' : 'Payment Amount'}
-            </label>
-            <div className="input-with-icon">
-              <span className="input-icon">₹</span>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => { setAmount(e.target.value); setError(''); }}
-                placeholder="e.g. 5000"
-                required
-                min="1"
-                style={{
-                  width: '100%',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: 'var(--text-primary)',
-                  padding: '0.8rem 1rem 0.8rem 2.5rem',
-                  borderRadius: '12px',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-            {isPurchase ? (
-              <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.5rem' }}>
-                Available Limit: ₹{card.available_limit.toLocaleString('en-IN')}
-              </small>
-            ) : (
-              <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.5rem' }}>
-                Outstanding Balance: ₹{card.outstanding_balance.toLocaleString('en-IN')}
-              </small>
-            )}
-          </div>
+        {/* CARD INFO */}
+        <div
+          className="loan-info-box"
+          style={{ marginBottom: '1rem' }}
+        >
 
+          <p>
+            <b>Card:</b> ****
+            {card.card_number?.slice(-4)}
+          </p>
+
+          <p>
+            <b>Available Limit:</b> ₹
+            {Number(card.available_limit).toLocaleString('en-IN')}
+          </p>
+
+        </div>
+
+        {/* FORM */}
+        <form onSubmit={handleSubmit}>
+
+          {/* PURCHASE */}
+          {isPurchase && (
+            <>
+
+              {/* AMOUNT */}
+              <div className="form-group">
+
+                <label>Purchase Amount</label>
+
+                <div className="input-with-icon">
+
+                  <span className="input-icon">
+                    ₹
+                  </span>
+
+                  <input
+                    type="number"
+                    name="amount"
+                    value={formData.amount}
+                    onChange={handleChange}
+                    placeholder="Enter amount"
+                    required
+                    min="1"
+                  />
+
+                </div>
+
+              </div>
+
+              {/* MERCHANT */}
+              <div className="form-group">
+
+                <label>Merchant Name</label>
+
+                <input
+                  type="text"
+                  name="merchant"
+                  value={formData.merchant}
+                  onChange={handleChange}
+                  placeholder="e.g. Amazon, Swiggy"
+                  required
+                />
+
+              </div>
+
+            </>
+          )}
+
+          {/* PAYMENT */}
+          {isPayment && (
+            <>
+
+              <div className="form-group">
+
+                <label>Payment Amount</label>
+
+                <div className="input-with-icon">
+
+                  <span className="input-icon">
+                    ₹
+                  </span>
+
+                  <input
+                    type="number"
+                    name="amount"
+                    value={formData.amount}
+                    onChange={handleChange}
+                    placeholder="Enter payment amount"
+                    required
+                    min="1"
+                  />
+
+                </div>
+
+              </div>
+
+
+
+            </>
+          )}
+
+          {/* ACTIONS */}
           <div className="loan-modal-actions">
-            <button type="button" className="btn-cancel" onClick={onClose} disabled={isLoading}>
+
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={onClose}
+              disabled={isLoading}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn-submit" disabled={isLoading}>
+
+            <button
+              type="submit"
+              className="btn-submit"
+              disabled={isLoading}
+            >
+
               {isLoading ? (
-                <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  Processing...
+                </>
               ) : (
-                <>{isPurchase ? 'Approve Transaction' : 'Confirm Payment'}</>
+                <>
+                  {isPurchase
+                    ? 'Complete Purchase'
+                    : 'Make Payment'}
+                </>
               )}
+
             </button>
+
           </div>
+
         </form>
+
       </div>
+
     </div>
   );
 };

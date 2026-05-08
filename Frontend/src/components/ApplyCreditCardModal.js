@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { creditCardAPI, accountAPI } from '../api/api';
-import './ApplyCreditCardModal.css';
 
 const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     requested_limit: '',
-    source_account_id: ''
+    source_account_id: '',
+    card_tier: 'entry'
   });
+
   const [accounts, setAccounts] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [estimatedLimit, setEstimatedLimit] = useState(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -17,14 +21,35 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
         const res = await accountAPI.getMyAccounts();
         if (res.success && res.data.length > 0) {
           setAccounts(res.data);
-          setFormData(prev => ({ ...prev, source_account_id: res.data[0].account_id }));
+          setFormData(prev => ({
+            ...prev,
+            source_account_id: res.data[0].account_id
+          }));
+          setSelectedAccount(res.data[0]);
         }
       } catch (err) {
         console.error("Failed to fetch accounts:", err);
       }
     };
+
     fetchAccounts();
   }, []);
+
+  // 🔥 Update selected account
+  useEffect(() => {
+    const acc = accounts.find(a => a.account_id === formData.source_account_id);
+    setSelectedAccount(acc || null);
+  }, [formData.source_account_id, accounts]);
+
+  // 🔥 Estimate limit (frontend preview)
+  useEffect(() => {
+    if (!selectedAccount) return;
+
+    const balance = parseFloat(selectedAccount.balance);
+
+    const estimated = balance * 0.5; // same logic as backend cap
+    setEstimatedLimit(Math.floor(estimated));
+  }, [selectedAccount]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,10 +64,12 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
     try {
       const payload = {
         requested_limit: Number(formData.requested_limit),
-        source_account_id: formData.source_account_id
+        source_account_id: formData.source_account_id,
+        card_tier: formData.card_tier
       };
 
       const res = await creditCardAPI.applyForCard(payload);
+
       if (res.success) {
         onSuccess(res.data);
       }
@@ -53,42 +80,64 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount) return '₹0';
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content cc-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '520px' }}>
+        
+        {/* Header */}
         <div className="modal-header">
-          <div>
-            <h2>Apply for Horizon VISA Premium</h2>
-            <p className="modal-subtitle">Get instant credit approval with competitive rates</p>
-          </div>
+          <h2>Apply for Horizon VISA</h2>
           <button className="btn-close" onClick={onClose} disabled={isLoading}>
             <i className="fas fa-times"></i>
           </button>
         </div>
 
+        {/* Error */}
         {error && (
           <div className="alert alert-danger" style={{ whiteSpace: 'pre-line', marginBottom: '1.5rem' }}>
-            <i className="fas fa-exclamation-circle"></i>
             {error}
           </div>
         )}
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="cc-form-wrapper">
-          <div className="cc-form-grid">
+
+          <div className="loan-form-grid" style={{ gridTemplateColumns: '1fr' }}>
+
+            {/* Account Selection */}
             <div className="form-group">
-              <label>
-                <i className="fas fa-rupee-sign"></i> Requested Credit Limit
-              </label>
+              <label>Linked Bank Account</label>
+              <select
+                name="source_account_id"
+                value={formData.source_account_id}
+                onChange={handleChange}
+                required
+              >
+                {accounts.map(acc => (
+                  <option key={acc.account_id} value={acc.account_id}>
+                    {acc.account_type.toUpperCase()} - ****{acc.account_number.slice(-4)} 
+                    (₹{parseFloat(acc.balance).toLocaleString('en-IN')})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Card Tier */}
+            <div className="form-group">
+              <label>Card Type</label>
+              <select
+                name="card_tier"
+                value={formData.card_tier}
+                onChange={handleChange}
+              >
+                <option value="entry">Entry</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+
+            {/* Requested Limit */}
+            <div className="form-group">
+              <label>Requested Credit Limit</label>
               <div className="input-with-icon">
                 <span className="input-icon">₹</span>
                 <input
@@ -96,89 +145,45 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
                   name="requested_limit"
                   value={formData.requested_limit}
                   onChange={handleChange}
-                  placeholder="Enter desired credit limit"
+                  placeholder="e.g. 200000"
                   required
                   min="10000"
-                  step="5000"
                 />
               </div>
-              <div className="input-hint">
-                <i className="fas fa-info-circle"></i>
-                Minimum ₹10,000 | Subject to credit score approval
-              </div>
             </div>
 
-            <div className="form-group">
-              <label>
-                <i className="fas fa-university"></i> Linked Bank Account
-              </label>
-              <select name="source_account_id" value={formData.source_account_id} onChange={handleChange} required>
-                {accounts.length === 0 && <option value="">No active accounts found</option>}
-                {accounts.map(acc => (
-                  <option key={acc.account_id} value={acc.account_id}>
-                    {acc.account_type.toUpperCase()} - ****{acc.account_number?.slice(-4) || '****'} 
-                    (Balance: {formatCurrency(acc.balance)})
-                  </option>
-                ))}
-              </select>
-              <div className="input-hint">
-                <i className="fas fa-link"></i>
-                This account will be used for auto-debit payments
+            {/* 🔥 Limit Preview */}
+            {estimatedLimit && (
+              <div className="loan-info-box">
+                <p>
+                  Estimated Eligible Limit: <b>₹{estimatedLimit.toLocaleString('en-IN')}</b>
+                </p>
+                <small style={{ color: 'var(--text-secondary)' }}>
+                  Final approval depends on income, liabilities & risk score.
+                </small>
               </div>
+            )}
+
+            {/* Info */}
+            <div className="loan-info-box">
+              <p>
+                Your <b>KYC</b>, <b>income</b>, and <b>credit profile</b> will be verified automatically.
+              </p>
             </div>
+
           </div>
 
-          {/* Enhanced Verification Box */}
-          <div className="cc-verification-box">
-            <div className="verification-header">
-              <i className="fas fa-shield-alt"></i>
-              <span>Auto-Verification Details</span>
-            </div>
-            <div className="verification-content">
-              <div className="verification-item">
-                <i className="fas fa-id-card"></i>
-                <div className="verification-info">
-                  <span className="verification-label">KYC Status</span>
-                  <span className="verification-value">Will be verified automatically</span>
-                </div>
-                <i className="fas fa-check-circle verification-icon"></i>
-              </div>
-              <div className="verification-item">
-                <i className="fas fa-chart-line"></i>
-                <div className="verification-info">
-                  <span className="verification-label">Annual Income</span>
-                  <span className="verification-value">Auto-fetched from profile</span>
-                </div>
-                <i className="fas fa-check-circle verification-icon"></i>
-              </div>
-              <div className="verification-item">
-                <i className="fas fa-credit-card"></i>
-                <div className="verification-info">
-                  <span className="verification-label">Credit Score</span>
-                  <span className="verification-value">Real-time verification</span>
-                </div>
-                <i className="fas fa-clock verification-icon pending"></i>
-              </div>
-            </div>
-            <div className="verification-footer">
-              <i className="fas fa-lock"></i>
-              Your information is securely encrypted and verified in real-time
-            </div>
-          </div>
-
-          <div className="cc-modal-actions">
+          {/* Actions */}
+          <div className="loan-modal-actions">
             <button type="button" className="btn-cancel" onClick={onClose} disabled={isLoading}>
-              <i className="fas fa-times"></i> Cancel
+              Cancel
             </button>
-            <button 
-              type="submit" 
-              className="btn-submit" 
-              disabled={isLoading || accounts.length === 0 || !formData.requested_limit || formData.requested_limit < 10000}
-            >
+
+            <button type="submit" className="btn-submit" disabled={isLoading || accounts.length === 0}>
               {isLoading ? (
-                <><i className="fas fa-spinner fa-spin"></i> Analyzing Credit...</>
+                <><i className="fas fa-spinner fa-spin"></i> Evaluating...</>
               ) : (
-                <><i className="fas fa-check-circle"></i> Submit Application</>
+                <>Apply Now <i className="fas fa-arrow-right"></i></>
               )}
             </button>
           </div>
