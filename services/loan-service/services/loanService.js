@@ -149,6 +149,18 @@ async function applyForLoan(data, userId) {
     };
   } catch (error) {
     await transaction.rollback();
+     await auditService.createAuditLog({
+    user_id: userId,
+    action_type: "loan_application",
+    entity_type: "loan",
+    entity_id: null,
+    status: "failure",
+    metadata: {
+      error: error.message,
+      loan_type: data.loan_type,
+      requested_amount: data.requested_amount,
+    },
+  });
     throw error;
   }
 }
@@ -264,6 +276,17 @@ async function processEMIPayment({ loan_id, payment_amount, source_account_id },
     return repayment;
   } catch (error) {
     await transaction.rollback();
+    await auditService.createAuditLog({
+    user_id: userId,
+    action_type: "emi_payment",
+    entity_type: "loan",
+    entity_id: loan_id,
+    status: "failure",
+    metadata: {
+      error: error.message,
+      payment_amount,
+    },
+  });
     throw error;
   }
 }
@@ -327,6 +350,16 @@ async function processForeclosure(loanId, sourceAccountId, userId) {
     return { loan_id: loanId, ...foreclosure, loan_status: "foreclosed" };
   } catch (error) {
     await transaction.rollback();
+     await auditService.createAuditLog({
+    user_id: userId,
+    action_type: "loan_foreclosure",
+    entity_type: "loan",
+    entity_id: loanId,
+    status: "failure",
+    metadata: {
+      error: error.message,
+    },
+  });
     throw error;
   }
 }
@@ -361,6 +394,7 @@ async function markDelinquent(loanId) {
  * Close a fully paid loan
  */
 async function closeLoan(loanId, userId) {
+  try {
   const loan = await Loan.findOne({ where: { loan_id: loanId, user_id: userId } });
   if (!loan) throw new Error("Loan not found or unauthorized.");
 
@@ -372,8 +406,32 @@ async function closeLoan(loanId, userId) {
   loan.closed_at = new Date();
   loan.next_due_date = null;
   await loan.save();
-
+  await auditService.createAuditLog({
+  user_id: userId,
+  action_type: "loan_closed",
+  entity_type: "loan",
+  entity_id: loanId,
+  status: "success",
+  metadata: {
+    closed_at: loan.closed_at,
+  },
+});
   return loan;
+} catch (error) {
+
+    await auditService.createAuditLog({
+      user_id: userId,
+      action_type: "loan_closed",
+      entity_type: "loan",
+      entity_id: loanId,
+      status: "failure",
+      metadata: {
+        error: error.message,
+      },
+    });
+
+    throw error;
+  }
 }
 
 /**

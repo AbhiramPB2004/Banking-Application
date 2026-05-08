@@ -238,6 +238,89 @@ async function logAccountClosure({
     metadata,
   });
 }
+/**
+ * Log loan application
+ */
+async function logLoanApplication({
+  user_id,
+  loan_id = null,
+  ip_address = null,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "loan_application",
+    entity_type: "loan",
+    entity_id: loan_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
+/**
+ * Log loan approval
+ */
+async function logLoanApproval({
+  user_id,
+  loan_id,
+  ip_address = null,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "loan_approval",
+    entity_type: "loan",
+    entity_id: loan_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
+/**
+ * Log loan rejection
+ */
+async function logLoanRejection({
+  user_id,
+  loan_id,
+  ip_address = null,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "loan_rejection",
+    entity_type: "loan",
+    entity_id: loan_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
+
+/**
+ * Log loan repayment
+ */
+async function logLoanRepayment({
+  user_id,
+  loan_id,
+  ip_address = null,
+  status,
+  metadata = {},
+}) {
+  return await createAuditLog({
+    user_id,
+    action_type: "loan_repayment",
+    entity_type: "loan",
+    entity_id: loan_id,
+    ip_address,
+    status,
+    metadata,
+  });
+}
 module.exports = {
   createAuditLog,
   getUserAuditLogs,
@@ -251,4 +334,8 @@ module.exports = {
   logAccountFreeze,
   logAccountUnfreeze,
   logAccountClosure,
+  logLoanApplication,
+  logLoanApproval,
+  logLoanRejection,
+  logLoanRepayment,
 };
