@@ -10,8 +10,7 @@ const RegisterModal = ({ onClose }) => {
     user: {
       full_name: '', dob: '', gender: '', address: '',
       aadhaar_number: '', pan_number: '', occupation: '', annual_income: ''
-    },
-    account: { account_type: 'savings', initial_deposit: '' }
+    }
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,21 +73,30 @@ const RegisterModal = ({ onClose }) => {
     return true;
   };
 
-  const validateStep3 = () => {
-    if (!formData.account.initial_deposit || parseFloat(formData.account.initial_deposit) < 1000) {
-      setError('Minimum initial deposit is ₹1,000'); return false;
-    }
-    return true;
-  };
 
-  const handleNext = () => {
-    if (step === 1 && validateStep1()) { setStep(2); setError(''); }
-    else if (step === 2 && validateStep2()) { setStep(3); setError(''); }
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateStep3()) return;
+const handleNext = async () => {
+
+  if (
+    step === 1 &&
+    validateStep1()
+  ) {
+    setStep(2);
+
+    setError('');
+  }
+
+  else if (
+    step === 2 &&
+    validateStep2()
+  ) {
+    await handleSubmit();
+  }
+};
+
+  const handleSubmit = async () => {
+    
+
 
     setLoading(true);
     setError('');
@@ -110,16 +118,12 @@ const RegisterModal = ({ onClose }) => {
           pan_number: formData.user.pan_number.toUpperCase(),
           occupation: formData.user.occupation,
           annual_income: parseFloat(formData.user.annual_income),
-        },
-        account: {
-          account_type: formData.account.account_type.toLowerCase(),
-          initial_deposit: parseFloat(formData.account.initial_deposit),
-        },
+        }
       };
 
       const res = await register(payload);
       setVerificationEmail(res.user?.email || payload.auth.email);
-      setStep(4);
+      setStep(3);
       setOtp('');
       setError('');
     } catch (err) {
@@ -194,11 +198,10 @@ const RegisterModal = ({ onClose }) => {
         {/* Progress */}
         <div className="progress-indicator">
           {[
-            { n: 1, label: 'Credentials', icon: 'fa-key' },
-            { n: 2, label: 'KYC Details', icon: 'fa-id-card' },
-            { n: 3, label: 'Account', icon: 'fa-university' },
-            { n: 4, label: 'Verify', icon: 'fa-envelope-open-text' }
-          ].map((s, i) => (
+  { n: 1, label: 'Credentials', icon: 'fa-key' },
+  { n: 2, label: 'KYC Details', icon: 'fa-id-card' },
+  { n: 3, label: 'Verify', icon: 'fa-envelope-open-text' }
+].map((s, i) => (
             <React.Fragment key={s.n}>
               {i > 0 && <div className={`progress-line ${step >= s.n ? 'active' : ''}`} />}
               <div className={`progress-step ${step >= s.n ? 'active' : ''} ${step > s.n ? 'done' : ''}`}>
@@ -211,7 +214,7 @@ const RegisterModal = ({ onClose }) => {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form>
           {/* Step 1 — Credentials */}
           {step === 1 && (
             <div className="form-step animate-fade">
@@ -319,57 +322,8 @@ const RegisterModal = ({ onClose }) => {
           )}
 
           {/* Step 3 — Account Setup */}
+          
           {step === 3 && (
-            <div className="form-step animate-fade">
-              <div className="input-group">
-                <label><i className="fas fa-piggy-bank" /> Account Type</label>
-                <div className="account-types">
-                  {[
-                    { v: 'savings', icon: 'fa-coins', label: 'Savings', desc: '4% interest' },
-                    { v: 'current', icon: 'fa-chart-line', label: 'Current', desc: 'For business' },
-                    { v: 'salary', icon: 'fa-wallet', label: 'Salary', desc: 'Zero balance' }
-                  ].map(t => (
-                    <label key={t.v} className={`account-option ${formData.account.account_type === t.v ? 'selected' : ''}`}>
-                      <input type="radio" name="account_type" value={t.v}
-                        checked={formData.account.account_type === t.v}
-                        onChange={(e) => update('account', 'account_type', e.target.value)} />
-                      <div className="option-content">
-                        <i className={`fas ${t.icon}`} />
-                        <span>{t.label}</span>
-                        <small>{t.desc}</small>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label><i className="fas fa-money-bill-wave" /> Initial Deposit (₹)</label>
-                <div className="amount-input">
-                  <span className="currency-symbol">₹</span>
-                  <input className="input-field" type="number" value={formData.account.initial_deposit}
-                    onChange={(e) => update('account', 'initial_deposit', e.target.value)}
-                    placeholder="1000" min="1000" step="500" required
-                    style={{ paddingLeft: '36px' }} />
-                </div>
-                <div className="input-hint"><i className="fas fa-info-circle" /> Minimum: ₹1,000</div>
-              </div>
-
-              {/* Summary */}
-              <div className="summary-card">
-                <h4><i className="fas fa-clipboard-list" /> Application Summary</h4>
-                <div className="summary-grid">
-                  <div><span>Name</span><strong>{formData.user.full_name || '—'}</strong></div>
-                  <div><span>Email</span><strong>{formData.auth.email || '—'}</strong></div>
-                  <div><span>Phone</span><strong>{formData.auth.phone || '—'}</strong></div>
-                  <div><span>Account</span><strong className="capitalize">{formData.account.account_type}</strong></div>
-                  <div><span>Deposit</span><strong>₹{parseFloat(formData.account.initial_deposit || 0).toLocaleString()}</strong></div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
             <div className="form-step animate-fade">
               <div className="verification-panel">
                 <div className="verification-icon">
@@ -408,38 +362,89 @@ const RegisterModal = ({ onClose }) => {
           )}
 
           <div className="modal-actions">
-            {step > 1 && step < 4 && (
-              <button type="button" className="btn btn-secondary" onClick={() => { setStep(step - 1); setError(''); }}>
-                <i className="fas fa-arrow-left" /> Back
-              </button>
-            )}
-            {step < 3 ? (
-              <button type="button" className="btn btn-primary" onClick={handleNext}>
-                Continue <i className="fas fa-arrow-right" />
-              </button>
-            ) : step === 3 ? (
-              <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-                {loading ? (
-                  <><div className="loading-spinner sm" /> Creating Account...</>
-                ) : (
-                  <><i className="fas fa-check-circle" /> Open Account</>
-                )}
-              </button>
-            ) : (
-              <>
-                <button type="button" className="btn btn-secondary" onClick={handleResendOtp} disabled={loading}>
-                  Resend OTP
-                </button>
-                <button type="button" className="btn btn-primary btn-lg" onClick={handleVerifyEmail} disabled={loading || otp.length !== 6}>
-                  {loading ? (
-                    <><div className="loading-spinner sm" /> Verifying...</>
-                  ) : (
-                    <><i className="fas fa-check-circle" /> Verify & Activate</>
-                  )}
-                </button>
-              </>
-            )}
-          </div>
+
+  {step > 1 && step < 3 && (
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => {
+        setStep(step - 1);
+        setError('');
+      }}
+    >
+      <i className="fas fa-arrow-left" />
+      Back
+    </button>
+  )}
+
+  {step < 2 ? (
+
+    <button
+      type="button"
+      className="btn btn-primary"
+      onClick={handleNext}
+    >
+      Continue
+      <i className="fas fa-arrow-right" />
+    </button>
+
+  ) : step === 2 ? (
+
+    <button
+      type="button"
+      className="btn btn-primary btn-lg"
+      onClick={handleNext}
+      disabled={loading}
+    >
+      {loading ? (
+        <>
+          <div className="loading-spinner sm" />
+          Creating Profile...
+        </>
+      ) : (
+        <>
+          <i className="fas fa-check-circle" />
+          Submit KYC
+        </>
+      )}
+    </button>
+
+  ) : (
+
+    <>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={handleResendOtp}
+        disabled={loading}
+      >
+        Resend OTP
+      </button>
+
+      <button
+        type="button"
+        className="btn btn-primary btn-lg"
+        onClick={handleVerifyEmail}
+        disabled={
+          loading || otp.length !== 6
+        }
+      >
+        {loading ? (
+          <>
+            <div className="loading-spinner sm" />
+            Verifying...
+          </>
+        ) : (
+          <>
+            <i className="fas fa-check-circle" />
+            Verify & Activate
+          </>
+        )}
+      </button>
+    </>
+
+  )}
+</div>
         </form>
       </div>
     </div>

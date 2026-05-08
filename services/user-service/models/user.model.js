@@ -3,15 +3,6 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../../shared/config/db");
 
-/**
- * User Model
- * Handles:
- * - Personal details
- * - Authentication credentials
- * - KYC basics
- * - Banking user lifecycle
- */
-
 const User = sequelize.define(
   "User",
   {
@@ -24,27 +15,49 @@ const User = sequelize.define(
     full_name: {
       type: DataTypes.STRING(255),
       allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Full name cannot be null.",
+        },
+        notEmpty: {
+          msg: "Full name cannot be empty.",
+        },
+      },
     },
 
     email: {
-    type: DataTypes.STRING(254),
-    allowNull: false,
-    unique: true,
-    validate: {
+      type: DataTypes.STRING(254),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notNull: {
+          msg: "Email cannot be null.",
+        },
+        notEmpty: {
+          msg: "Email cannot be empty.",
+        },
         isEmail: {
-        msg: "Valid email is required.",
+          msg: "Valid email is required.",
         },
         len: {
-        args: [5, 254],
-        msg: "Email length must be between 5 and 254 characters.",
+          args: [5, 254],
+          msg: "Email length must be between 5 and 254 characters.",
         },
-    },
+      },
     },
 
     phone: {
       type: DataTypes.STRING(15),
       allowNull: false,
       unique: true,
+      validate: {
+        notNull: {
+          msg: "Phone number cannot be null.",
+        },
+        notEmpty: {
+          msg: "Phone number cannot be empty.",
+        },
+      },
     },
 
     password_hash: {
@@ -70,6 +83,14 @@ const User = sequelize.define(
     address: {
       type: DataTypes.TEXT,
       allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Address cannot be null.",
+        },
+        notEmpty: {
+          msg: "Address cannot be empty.",
+        },
+      },
     },
 
     aadhaar_number: {
@@ -87,12 +108,25 @@ const User = sequelize.define(
     occupation: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      validate: {
+        notNull: {
+          msg: "Occupation cannot be null.",
+        },
+        notEmpty: {
+          msg: "Occupation cannot be empty.",
+        },
+      },
     },
 
     annual_income: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       defaultValue: 0,
+      validate: {
+        notNull: {
+          msg: "Annual income cannot be null.",
+        },
+      },
     },
 
     kyc_status: {

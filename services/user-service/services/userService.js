@@ -61,13 +61,16 @@ async function getUserByEmail(email) {
   });
 }
 
+
 /**
  * Update profile
  */
 async function updateUserProfile(user_id, data) {
   const user = await User.findByPk(user_id);
 
-  if (!user) throw new Error("User not found.");
+  if (!user) {
+    throw new Error("User not found.");
+  }
 
   const allowedFields = [
     "full_name",
@@ -77,6 +80,102 @@ async function updateUserProfile(user_id, data) {
     "annual_income",
   ];
 
+  // Full Name validation
+  // Full Name validation
+if (data.full_name !== undefined) {
+
+  // Null or empty
+  if (
+    data.full_name === null ||
+    data.full_name.trim() === ""
+  ) {
+    throw new Error("full_name cannot be empty or null.");
+  }
+
+  // Minimum length
+  if (data.full_name.trim().length < 3) {
+    throw new Error(
+      "full_name must be at least 3 characters long."
+    );
+  }
+}
+  // Phone validation
+  // Phone validation
+if (data.phone !== undefined) {
+
+  // Empty or null
+  if (
+    data.phone === null ||
+    data.phone.trim() === ""
+  ) {
+    throw new Error("phone cannot be empty or null.");
+  }
+
+  // Must be exactly 10 digits
+  const phoneRegex = /^[0-9]{10}$/;
+
+  if (!phoneRegex.test(data.phone)) {
+    throw new Error(
+      "Phone number must contain exactly 10 digits."
+    );
+  }
+}
+
+  // Address validation
+  if (
+    data.address !== undefined &&
+    (
+      data.address === null ||
+      data.address.trim() === ""
+    )
+  ) {
+    throw new Error("address cannot be empty or null.");
+  }
+
+  // Occupation validation
+  // Occupation validation
+if (data.occupation !== undefined) {
+
+  // Null or empty
+  if (
+    data.occupation === null ||
+    data.occupation.trim() === ""
+  ) {
+    throw new Error(
+      "occupation cannot be empty or null."
+    );
+  }
+
+  // Only alphabets and spaces allowed
+  const occupationRegex = /^[A-Za-z\s]+$/;
+
+  if (!occupationRegex.test(data.occupation.trim())) {
+    throw new Error(
+      "occupation must contain only alphabets and spaces."
+    );
+  }
+}
+
+  // Annual Income validation
+  if (data.annual_income !== undefined) {
+
+    // Empty or null
+    if (
+      data.annual_income === null ||
+      data.annual_income === ""
+    ) {
+      throw new Error("annual_income cannot be empty.");
+    }
+
+    // Zero or negative
+    if (Number(data.annual_income) <= 0) {
+      throw new Error(
+        "annual_income must be greater than 0."
+      );
+    }
+  }
+
+  // Update fields
   allowedFields.forEach((field) => {
     if (data[field] !== undefined) {
       user[field] = data[field];
@@ -84,9 +183,9 @@ async function updateUserProfile(user_id, data) {
   });
 
   await user.save();
+
   return user;
 }
-
 /**
  * Update KYC
  */
@@ -98,27 +197,27 @@ async function updateKYCStatus(user_id, data) {
 
   if (!user) throw new Error("User not found.");
 
-  // 🚫 Aadhaar update not allowed if already exists
+  //  Aadhaar update not allowed if already exists
   if (user.aadhaar_number && data.aadhaar_number) {
     throw new Error("Aadhaar number cannot be updated once submitted.");
   }
 
-  // 🚫 PAN update not allowed if already exists
+  //  PAN update not allowed if already exists
   if (user.pan_number && data.pan_number) {
     throw new Error("PAN number cannot be updated once submitted.");
   }
 
-  // ✅ Set Aadhaar (only first time)
+  //  Set Aadhaar (only first time)
   if (!user.aadhaar_number && data.aadhaar_number) {
     user.aadhaar_number = data.aadhaar_number;
   }
 
-  // ✅ Set PAN (only first time)
+  //  Set PAN (only first time)
   if (!user.pan_number && data.pan_number) {
     user.pan_number = data.pan_number;
   }
 
-  // ✅ Update KYC status
+  //  Update KYC status
   if (data.kyc_status) {
     user.kyc_status = data.kyc_status;
   } else {

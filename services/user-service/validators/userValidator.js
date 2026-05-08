@@ -27,9 +27,33 @@ function validateUserInput(data) {
   }
 
   // Address
-  if (!data.address || data.address.trim().length < 10) {
-    errors.push("Valid address is required.");
+ // Address validation
+if (data.address !== undefined) {
+
+  // Null or empty
+  if (
+    data.address === null ||
+    data.address.trim() === ""
+  ) {
+    throw new Error(
+      "address cannot be empty or null."
+    );
   }
+
+  // Minimum length
+  if (data.address.trim().length < 10) {
+    throw new Error(
+      "address must be at least 10 characters long."
+    );
+  }
+
+  // Maximum length
+  if (data.address.trim().length > 1000) {
+    throw new Error(
+      "address cannot exceed 1000 characters."
+    );
+  }
+}
 
   // Aadhaar
   const aadhaarRegex = /^[0-9]{12}$/;

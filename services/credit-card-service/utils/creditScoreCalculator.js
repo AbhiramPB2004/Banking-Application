@@ -43,7 +43,7 @@ const calculateCreditScore = (userData) => {
     const monthlyIncome = annual_income / 12;
     const dtiRatio = liabilities / monthlyIncome;
 
-    let baseScore = 300; // Starting simulated score
+    let baseScore = 400; // Starting simulated score
 
     // 5. Income-based Scoring
     if (annual_income > 1200000) baseScore += 400;
@@ -74,4 +74,4 @@ const calculateCreditScore = (userData) => {
     };
 };
 
-module.exports = { calculateCreditScore };
+module.exports = { calculateCreditScore };

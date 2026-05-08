@@ -109,12 +109,11 @@ async function registerUser(req, res) {
      */
     const authValidation = validateAuthInput(auth);
     const userValidation = validateUserInput(user);
-    const accountValidation = validateAccountInput(account);
+    // const accountValidation = validateAccountInput(account);
 
     const validationErrors = [
       ...authValidation.errors,
       ...userValidation.errors,
-      ...accountValidation.errors,
     ];
 
     if (validationErrors.length > 0) {
@@ -167,16 +166,16 @@ async function registerUser(req, res) {
      * Step 5: Create Account
      */
     // console.log(account)
-    const newAccount = await createAccount({
-      user_id: newUser.user_id,
-      account_type: account.account_type,
-      initial_deposit: account.initial_deposit,
-      branch_code: account.branch_code,
-      ifsc_code: account.ifsc_code,
-    });
+    // const newAccount = await createAccount({
+    //   user_id: newUser.user_id,
+    //   account_type: account.account_type,
+    //   initial_deposit: account.initial_deposit,
+    //   branch_code: account.branch_code,
+    //   ifsc_code: account.ifsc_code,
+    // });
 
-    newAccount.status = "pending";
-    await newAccount.save();
+    // newAccount.status = "pending";
+    // await newAccount.save();
 
     const otpData = await createEmailOtp({
       user_id: newUser.user_id,
@@ -201,15 +200,15 @@ async function registerUser(req, res) {
       },
     });
 
-    await logAccountCreation({
-      user_id: newUser.user_id,
-      account_id: newAccount.account_id,
-      ip_address: req.ip,
-      status: "success",
-      metadata: {
-        account_number: newAccount.account_number,
-      },
-    });
+    // await logAccountCreation({
+    //   user_id: newUser.user_id,
+    //   account_id: newAccount.account_id,
+    //   ip_address: req.ip,
+    //   status: "success",
+    //   metadata: {
+    //     account_number: newAccount.account_number,
+    //   },
+    // });
 
     /**
      * Step 11: Success Response
@@ -225,15 +224,15 @@ async function registerUser(req, res) {
         phone: newUser.phone,
         status: "pending",
       },
-      account: {
-        account_id: newAccount.account_id,
-        account_number:
-          newAccount.account_number,
-        account_type:
-          newAccount.account_type,
-        balance: newAccount.balance,
-        status: newAccount.status,
-      },
+      // account: {
+      //   account_id: newAccount.account_id,
+      //   account_number:
+      //     newAccount.account_number,
+      //   account_type:
+      //     newAccount.account_type,
+      //   balance: newAccount.balance,
+      //   status: newAccount.status,
+      // },
     });
   } catch (error) {
     console.error(
