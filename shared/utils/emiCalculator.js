@@ -49,49 +49,49 @@ function generateAmortizationSchedule(
   const monthlyRate = annualRate / 12 / 100;
 
   const schedule = [];
+  // Use full float precision for running balance — only round at output
   let outstanding = principal;
   let currentDate = new Date(startDate);
 
   for (let i = 1; i <= tenureMonths; i++) {
-    // Move to next month
     currentDate = new Date(currentDate);
     currentDate.setMonth(currentDate.getMonth() + 1);
 
-    const interestComponent = parseFloat(
-      (outstanding * monthlyRate).toFixed(2)
-    );
+    // Keep interest in full precision to avoid compounding rounding drift
+    const interestRaw = outstanding * monthlyRate;
+    const interestComponent = parseFloat(interestRaw.toFixed(2));
 
-    // Last installment: adjust principal to clear outstanding exactly
     let principalComponent;
+    let emiAmount;
+
     if (i === tenureMonths) {
+      // Last installment: clear whatever remains exactly.
+      // Do NOT use a rounded intermediate — use the live outstanding value
+      // so the final EMI matches what the user actually needs to pay.
       principalComponent = parseFloat(outstanding.toFixed(2));
+      emiAmount = parseFloat((principalComponent + interestComponent).toFixed(2));
+      outstanding = 0;
     } else {
-      principalComponent = parseFloat(
-        (emi - interestComponent).toFixed(2)
-      );
+      principalComponent = parseFloat((emi - interestComponent).toFixed(2));
+      outstanding = outstanding - principalComponent;
+      // Clamp floating-point noise (e.g. -0.0000001 after many iterations)
+      if (outstanding < 0) outstanding = 0;
+      emiAmount = emi;
     }
-
-    outstanding = parseFloat(
-      (outstanding - principalComponent).toFixed(2)
-    );
-
-    // Ensure no floating point negatives
-    if (outstanding < 0) outstanding = 0;
 
     schedule.push({
       installment_number: i,
       due_date: currentDate.toISOString().split("T")[0],
-      emi_amount: i === tenureMonths
-        ? parseFloat((principalComponent + interestComponent).toFixed(2))
-        : emi,
+      emi_amount: emiAmount,
       principal_component: principalComponent,
       interest_component: interestComponent,
-      outstanding_after: outstanding,
+      outstanding_after: parseFloat(outstanding.toFixed(2)),
     });
   }
 
   return schedule;
 }
+
 
 /**
  * Calculate foreclosure penalty

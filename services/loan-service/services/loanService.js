@@ -30,10 +30,40 @@ async function applyForLoan(data, userId) {
     const product = getProductConfig(data.loan_type);
     if (!product) throw new Error("Invalid loan type.");
 
+    // ── Active loan checks ───────────────────────────────────────────────────
+    // Fetch all currently active, approved loans for this user.
+    const activeLoans = await Loan.findAll({
+      where: { user_id: userId, approval_status: "approved", loan_status: "active" },
+      transaction,
+    });
+
+    // Hard cap: max 3 active loans at a time.
+    // This prevents unlimited debt accumulation.
+    const MAX_ACTIVE_LOANS = 3;
+    if (activeLoans.length >= MAX_ACTIVE_LOANS) {
+      throw new Error(
+        `You already have ${activeLoans.length} active loan(s). ` +
+        `Maximum ${MAX_ACTIVE_LOANS} active loans are allowed. ` +
+        `Please close or foreclose an existing loan before applying for a new one.`
+      );
+    }
+
+    // Sum all existing monthly EMIs from active loans.
+    // These are mandatory financial obligations and MUST be factored into the DTI check
+    // regardless of what the applicant self-reports in existing_liabilities.
+    const activeEmiTotal = activeLoans.reduce(
+      (sum, l) => sum + parseFloat(l.monthly_emi || 0),
+      0
+    );
+
+    // Combine self-reported liabilities with system-calculated active EMIs.
+    // System total always includes actual active debt — the user cannot omit it.
+    const totalLiabilities = parseFloat(data.existing_liabilities || 0) + activeEmiTotal;
+
     // 4. Credit score & eligibility
     const creditScore = calculateCreditScore({
       annual_income: parseFloat(data.annual_income),
-      existing_liabilities: parseFloat(data.existing_liabilities),
+      existing_liabilities: totalLiabilities, // uses verified total, not just self-reported
       occupation: user.occupation,
     });
 
@@ -42,7 +72,7 @@ async function applyForLoan(data, userId) {
 
     const dtiCheck = evaluateDebtToIncomeRatio(
       parseFloat(data.annual_income),
-      parseFloat(data.existing_liabilities),
+      totalLiabilities, // DTI must include all active obligations
       emi
     );
 
@@ -184,9 +214,16 @@ async function getLoanSchedule(loanId, userId) {
 }
 
 /**
- * Process EMI payment
+ * Process EMI payment — supports paying multiple installments at once.
+ *
+ * Prepayment penalty logic:
+ *   - Paying 1 installment (current due): no penalty.
+ *   - Paying N > 1 installments: a prepayment penalty applies to the
+ *     principal components of installments 2…N (the ones paid ahead of schedule).
+ *   - Penalty = sum_of_extra_principal × (product.prepayment_penalty_rate / 100)
+ *   - Total debit = sum_of_all_emi_amounts + penalty_amount
  */
-async function processEMIPayment({ loan_id, payment_amount, source_account_id }, userId) {
+async function processEMIPayment({ loan_id, payment_amount, source_account_id, installments_to_pay = 1 }, userId) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -195,58 +232,100 @@ async function processEMIPayment({ loan_id, payment_amount, source_account_id },
     if (loan.approval_status !== "approved") throw new Error("Loan is not approved.");
     if (loan.loan_status !== "active") throw new Error("Loan is not active.");
 
-    // Validate source account ownership
     await accountService.getAccountById(source_account_id, userId);
 
-    // Find next due EMI
-    const nextEMI = await EMISchedule.findOne({
+    // Fetch the next N pending installments in order
+    const count = Math.max(1, Math.min(parseInt(installments_to_pay) || 1, 12));
+
+    const pendingInstallments = await EMISchedule.findAll({
       where: { loan_id, status: ["upcoming", "overdue"] },
       order: [["installment_number", "ASC"]],
+      limit: count,
       transaction,
     });
 
-    if (!nextEMI) throw new Error("No pending EMI installments found.");
+    if (!pendingInstallments.length) throw new Error("No pending EMI installments found.");
 
-    if (payment_amount < parseFloat(nextEMI.emi_amount)) {
-      throw new Error(`Payment amount ₹${payment_amount} is less than EMI amount ₹${nextEMI.emi_amount}.`);
+    // Can't pay more installments than exist
+    if (pendingInstallments.length < count) {
+      throw new Error(
+        `Only ${pendingInstallments.length} installment(s) remaining. Cannot pay ${count}.`
+      );
     }
 
-    // Debit source account
-    await accountService.updateBalance(source_account_id, parseFloat(nextEMI.emi_amount), "debit");
+    // ── Penalty calculation ──────────────────────────────────────────────
+    const product = getProductConfig(loan.loan_type);
+    const prepaymentRate = product?.prepayment_penalty_rate ?? 2; // default 2%
 
-    // Update EMI schedule
-    nextEMI.status = "paid";
-    nextEMI.paid_at = new Date();
-    await nextEMI.save({ transaction });
+    // First installment is the one currently due — no penalty on it.
+    // Penalty applies only to the EXTRA principal paid ahead of schedule.
+    const extraInstallments = pendingInstallments.slice(1); // installments 2…N
+    const extraPrincipalSum = extraInstallments.reduce(
+      (sum, emi) => sum + parseFloat(emi.principal_component),
+      0
+    );
+    const penaltyAmount = count > 1
+      ? parseFloat(((extraPrincipalSum * prepaymentRate) / 100).toFixed(2))
+      : 0;
 
-    // Update loan outstanding
-    const newOutstanding = parseFloat(loan.outstanding_balance) - parseFloat(nextEMI.principal_component);
+    // ── Total EMI sum ────────────────────────────────────────────────────
+    const totalEmiSum = parseFloat(
+      pendingInstallments.reduce((s, e) => s + parseFloat(e.emi_amount), 0).toFixed(2)
+    );
+    const totalDue = parseFloat((totalEmiSum + penaltyAmount).toFixed(2));
+
+    // ── Validate submitted amount ────────────────────────────────────────
+    const submitted = parseFloat(parseFloat(payment_amount).toFixed(2));
+    const TOLERANCE = 0.01;
+    if (submitted < totalDue - TOLERANCE) {
+      throw new Error(
+        `Payment amount ₹${submitted.toFixed(2)} is less than total due ₹${totalDue.toFixed(2)}` +
+        (penaltyAmount > 0
+          ? ` (EMIs: ₹${totalEmiSum.toFixed(2)} + prepayment penalty: ₹${penaltyAmount.toFixed(2)})`
+          : ".")
+      );
+    }
+
+    // ── Debit source account (total including penalty) ───────────────────
+    await accountService.updateBalance(source_account_id, totalDue, "debit");
+
+    // ── Mark all selected installments as paid ───────────────────────────
+    for (const emi of pendingInstallments) {
+      emi.status = "paid";
+      emi.paid_at = new Date();
+      await emi.save({ transaction });
+    }
+
+    // ── Update loan outstanding balance ──────────────────────────────────
+    const totalPrincipalPaid = parseFloat(
+      pendingInstallments.reduce((s, e) => s + parseFloat(e.principal_component), 0).toFixed(2)
+    );
+    const newOutstanding = parseFloat(loan.outstanding_balance) - totalPrincipalPaid;
     loan.outstanding_balance = parseFloat(Math.max(0, newOutstanding).toFixed(2));
 
-    // Find next upcoming EMI for due date
-    const upcomingEMI = await EMISchedule.findOne({
+    // ── Advance next due date ─────────────────────────────────────────────
+    const nextUpcoming = await EMISchedule.findOne({
       where: { loan_id, status: "upcoming" },
       order: [["installment_number", "ASC"]],
       transaction,
     });
 
-    loan.next_due_date = upcomingEMI ? upcomingEMI.due_date : null;
+    loan.next_due_date = nextUpcoming ? nextUpcoming.due_date : null;
 
-    // Auto-close if all paid
-    if (!upcomingEMI && loan.outstanding_balance <= 0) {
+    if (!nextUpcoming && loan.outstanding_balance <= 0) {
       loan.loan_status = "closed";
       loan.closed_at = new Date();
     }
 
     await loan.save({ transaction });
 
-    // Record repayment
+    // ── Record repayment ──────────────────────────────────────────────────
     const repayment = await RepaymentHistory.create({
       loan_id,
-      schedule_id: nextEMI.schedule_id,
+      schedule_id: pendingInstallments[0].schedule_id, // reference to first paid installment
       source_account_id,
-      payment_amount: parseFloat(nextEMI.emi_amount),
-      payment_type: "emi",
+      payment_amount: totalDue,
+      payment_type: count > 1 ? "bulk_prepayment" : "emi",
       paid_at: new Date(),
     }, { transaction });
 
@@ -254,19 +333,35 @@ async function processEMIPayment({ loan_id, payment_amount, source_account_id },
 
     await auditService.createAuditLog({
       user_id: userId,
-      action_type: "emi_payment",
+      action_type: count > 1 ? "bulk_emi_prepayment" : "emi_payment",
       entity_type: "loan",
       entity_id: loan_id,
       status: "success",
-      metadata: { installment: nextEMI.installment_number, amount: parseFloat(nextEMI.emi_amount) },
+      metadata: {
+        installments_paid: count,
+        emi_total: totalEmiSum,
+        prepayment_penalty: penaltyAmount,
+        total_charged: totalDue,
+        prepayment_rate_pct: prepaymentRate,
+      },
     });
 
-    return repayment;
+    return {
+      ...repayment.toJSON(),
+      installments_paid: count,
+      emi_total: totalEmiSum,
+      prepayment_penalty: penaltyAmount,
+      total_charged: totalDue,
+      prepayment_rate_pct: prepaymentRate,
+      new_outstanding_balance: loan.outstanding_balance,
+      loan_status: loan.loan_status,
+    };
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 }
+
 
 /**
  * Process loan foreclosure
@@ -415,13 +510,84 @@ async function calculateInterest(loanId) {
   };
 }
 
+/**
+ * Get foreclosure preview (read-only, no payment)
+ * Returns the exact breakdown so the UI can show accurate amounts before confirmation.
+ */
+async function getForeclosurePreview(loanId, userId) {
+  const loan = await Loan.findOne({ where: { loan_id: loanId, user_id: userId } });
+  if (!loan) throw new Error("Loan not found or unauthorized.");
+  if (loan.loan_status !== "active") throw new Error("Loan is not active.");
+  if (loan.approval_status !== "approved") throw new Error("Loan is not approved.");
+
+  const product = getProductConfig(loan.loan_type);
+  const foreclosure = calculateForeclosurePenalty(
+    parseFloat(loan.outstanding_balance),
+    product.foreclosure_penalty_rate
+  );
+
+  // Count remaining installments
+  const remainingCount = await EMISchedule.count({
+    where: { loan_id: loanId, status: ["upcoming", "overdue"] }
+  });
+
+  return {
+    loan_id: loanId,
+    loan_type: loan.loan_type,
+    product_name: product.name,
+    foreclosure_penalty_rate: product.foreclosure_penalty_rate,
+    remaining_installments: remainingCount,
+    ...foreclosure,
+  };
+}
+
+/**
+ * Get active loans summary for the current user.
+ * Used by the frontend to:
+ *  1. Pre-fill the "Existing Liabilities" field with the sum of active EMIs.
+ *  2. Show how many loan slots remain (max 3).
+ */
+async function getActiveLoansSummary(userId) {
+  const MAX_ACTIVE_LOANS = 3;
+
+  const activeLoans = await Loan.findAll({
+    where: { user_id: userId, approval_status: "approved", loan_status: "active" },
+    attributes: ["loan_id", "loan_type", "monthly_emi", "outstanding_balance", "next_due_date"],
+    order: [["created_at", "ASC"]],
+  });
+
+  const totalMonthlyEmi = parseFloat(
+    activeLoans.reduce((sum, l) => sum + parseFloat(l.monthly_emi || 0), 0).toFixed(2)
+  );
+
+  const totalOutstanding = parseFloat(
+    activeLoans.reduce((sum, l) => sum + parseFloat(l.outstanding_balance || 0), 0).toFixed(2)
+  );
+
+  return {
+    active_loan_count: activeLoans.length,
+    max_active_loans: MAX_ACTIVE_LOANS,
+    remaining_slots: Math.max(0, MAX_ACTIVE_LOANS - activeLoans.length),
+    can_apply: activeLoans.length < MAX_ACTIVE_LOANS,
+    total_monthly_emi: totalMonthlyEmi,      // auto-added to liabilities during DTI check
+    total_outstanding: totalOutstanding,
+    active_loans: activeLoans.map(l => ({
+      loan_id: l.loan_id,
+      loan_type: l.loan_type,
+      monthly_emi: parseFloat(l.monthly_emi),
+    })),
+  };
+}
+
 module.exports = {
   applyForLoan,
   getLoanById,
   getUserLoans,
+  getActiveLoansSummary,
   getLoanSchedule,
   processEMIPayment,
   processForeclosure,
+  getForeclosurePreview,
   markDelinquent,
   closeLoan,
   updateLoanStatus,

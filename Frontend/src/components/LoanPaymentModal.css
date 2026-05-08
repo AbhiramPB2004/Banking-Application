@@ -1,29 +1,325 @@
-/* LoanPaymentModal.css */
-/* Reuses global modal styles */
+/* LoanPaymentModal.css — full premium redesign */
 
-.payment-summary {
-  background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+/* ── Overlay ──────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* ── Modal shell ─────────────────────────────── */
+.lpm-modal {
+  background: var(--bg-card, #1a1f2e);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  animation: lpm-slide-in 0.25s ease;
+}
+
+@keyframes lpm-slide-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── Header ──────────────────────────────────── */
+.lpm-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+.lpm-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.lpm-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary, #f0f0f0);
+}
+
+.lpm-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.lpm-close {
+  position: absolute;
+  right: 1.25rem;
+  top: 1.25rem;
+  background: rgba(255,255,255,0.05);
+  border: none;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary, #9ca3af);
+  transition: background 0.2s, color 0.2s;
+}
+.lpm-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* ── Body ──────────────────────────────────── */
+.lpm-body {
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Alerts ────────────────────────────────── */
+.lpm-alert {
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.lpm-alert-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+.lpm-alert-info  { background: rgba(99,102,241,0.10); border: 1px solid rgba(99,102,241,0.2); color: #a5b4fc; }
+
+/* ── Loading ───────────────────────────────── */
+.lpm-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary, #9ca3af);
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+/* ── Field / Label ─────────────────────────── */
+.lpm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lpm-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Count selector ────────────────────────── */
+.lpm-count-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lpm-count-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary, #f0f0f0);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.lpm-count-btn:hover:not(:disabled) { background: rgba(99,102,241,0.25); border-color: #6366f1; }
+.lpm-count-btn:disabled { opacity: 0.3; cursor: default; }
+
+.lpm-count-val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary, #f0f0f0);
+  min-width: 32px;
   text-align: center;
 }
 
-.payment-summary .amount {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
+.lpm-count-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #9ca3af);
 }
 
-.payment-summary .amount.foreclose {
-  color: #ef4444;
+/* ── Breakdown card ────────────────────────── */
+.lpm-breakdown {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.payment-summary .label {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
+.lpm-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.lpm-penalty-row {
+  color: #fbbf24;
+}
+.lpm-penalty-val {
+  color: #f97316;
+  font-weight: 600;
+}
+
+.lpm-penalty-note {
+  font-size: 0.75rem;
+  color: rgba(251,191,36,0.7);
+  background: rgba(251,191,36,0.06);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  margin-top: -0.25rem;
+}
+
+.lpm-total-row {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 0.6rem;
+  margin-top: 0.25rem;
+  color: var(--text-primary, #f0f0f0);
+  font-size: 1rem;
+}
+.lpm-total-val {
+  font-size: 1.25rem;
+  color: #6366f1;
+}
+
+/* ── Installments mini-table ───────────────── */
+.lpm-installments-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lpm-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.lpm-mini-table thead th {
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  color: var(--text-secondary, #9ca3af);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-weight: 600;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
 }
+.lpm-mini-table thead th:first-child { text-align: left; }
+
+.lpm-mini-table tbody td {
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  color: var(--text-primary, #f0f0f0);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.lpm-mini-table tbody td:first-child { text-align: left; color: var(--text-secondary, #9ca3af); }
+.lpm-mini-table tbody tr.lpm-overdue td { color: #f87171; }
+
+/* ── Foreclosure warning ───────────────────── */
+.lpm-foreclose-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 10px;
+  color: #fca5a5;
+  font-size: 0.875rem;
+}
+.lpm-foreclose-warning i { color: #ef4444; margin-top: 2px; flex-shrink: 0; }
+
+.lpm-foreclose-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #9ca3af);
+  padding: 0 0.25rem;
+}
+
+/* ── Account select ─────────────────────────── */
+.lpm-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary, #f0f0f0);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.lpm-select:focus { outline: none; border-color: #6366f1; }
+
+/* ── Action buttons ─────────────────────────── */
+.lpm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+.lpm-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+.lpm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.lpm-btn-secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary, #9ca3af);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.lpm-btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: #fff; }
+
+.lpm-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+}
+.lpm-btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+
+.lpm-btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+.lpm-btn-danger:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(239,68,68,0.4); }

@@ -114,7 +114,7 @@ async function buyInvestment(data, userId) {
   try {
     const amount = normalizeMoney(data.amount);
     const user = await validateEligibleUser(userId, { transaction });
-
+    
     const product = await InvestmentProduct.findByPk(data.product_id, { transaction });
     if (!product) throw new Error("Investment product not found.");
     if (product.status !== "active") throw new Error("Investment product is not active.");

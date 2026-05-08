@@ -1,207 +1,375 @@
-/* LoanApplicationModal.css */
-/* Premium Glassmorphic Input Styling for Loan Modal */
+/* LoanApplicationModal.css — full redesign */
 
-.loan-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+/* ── Modal shell ────────────────────────────────────── */
+.lam-modal {
+  background: var(--bg-card, #1a1f2e);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  animation: lam-in 0.25s ease;
 }
 
-@media (max-width: 600px) {
-  .loan-form-grid {
-    grid-template-columns: 1fr;
-  }
+@keyframes lam-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.loan-form-grid .form-group {
+/* ── Header ─────────────────────────────────────────── */
+.lam-header {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: relative;
 }
 
-.loan-form-grid label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.lam-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.lam-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary, #f0f0f0);
+}
+
+.lam-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.lam-close {
+  position: absolute;
+  right: 1.25rem;
+  top: 1.25rem;
+  background: rgba(255,255,255,0.05);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary, #9ca3af);
+  transition: background 0.2s, color 0.2s;
+}
+.lam-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* ── Slot banner ────────────────────────────────────── */
+.lam-slots-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0.875rem 1.5rem;
+  background: rgba(16, 185, 129, 0.07);
+  border-bottom: 1px solid rgba(16,185,129,0.12);
+  font-size: 0.875rem;
+  color: #10b981;
+  gap: 1rem;
 }
 
-.loan-form-grid input,
-.loan-form-grid select {
+.lam-slots-banner.lam-slots-full {
+  background: rgba(239,68,68,0.07);
+  border-color: rgba(239,68,68,0.12);
+  color: #f87171;
+}
+
+.lam-slots-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.lam-slots-pips {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.lam-slot-pip {
+  width: 18px;
+  height: 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.lam-slot-pip.used { background: #ef4444; }
+.lam-slot-pip.free { background: rgba(255,255,255,0.15); }
+
+/* ── Liabilities notice ─────────────────────────────── */
+.lam-liabilities-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: rgba(99,102,241,0.06);
+  border-bottom: 1px solid rgba(99,102,241,0.1);
+  font-size: 0.82rem;
+  color: var(--text-secondary, #9ca3af);
+  line-height: 1.5;
+}
+.lam-liabilities-notice > i { color: #6366f1; margin-top: 2px; flex-shrink: 0; }
+.lam-liabilities-notice strong { color: var(--text-primary, #f0f0f0); }
+.lam-liabilities-notice div { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.lam-existing-loan-pill {
+  display: inline-block;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.2);
+  color: #a5b4fc;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  margin-right: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+/* ── Alerts ─────────────────────────────────────────── */
+.lam-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.875rem;
+}
+.lam-alert-error {
+  background: rgba(239,68,68,0.08);
+  border-top: 1px solid rgba(239,68,68,0.15);
+  border-bottom: 1px solid rgba(239,68,68,0.15);
+  color: #fca5a5;
+}
+
+/* ── Form ───────────────────────────────────────────── */
+.lam-form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.lam-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 540px) {
+  .lam-grid { grid-template-columns: 1fr; }
+}
+
+.lam-field { display: flex; flex-direction: column; gap: 0.4rem; }
+.lam-full  { grid-column: 1 / -1; }
+
+.lam-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Loan type radio grid ───────────────────────────── */
+.lam-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 540px) {
+  .lam-type-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.lam-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.875rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.lam-type-option input { display: none; }
+
+.lam-type-option i {
+  font-size: 1.3rem;
+  color: var(--text-secondary, #9ca3af);
+  transition: color 0.2s;
+}
+
+.lam-type-option span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #f0f0f0);
+  text-transform: capitalize;
+}
+
+.lam-type-option small {
+  font-size: 0.68rem;
+  color: var(--text-secondary, #9ca3af);
+  line-height: 1.3;
+}
+
+.lam-type-option.selected {
+  border-color: #6366f1;
+  background: rgba(99,102,241,0.12);
+}
+.lam-type-option.selected i { color: #818cf8; }
+
+.lam-type-option:hover:not(.selected) {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+}
+
+/* ── Inputs ─────────────────────────────────────────── */
+.lam-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lam-prefix {
+  position: absolute;
+  left: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary, #9ca3af);
+  pointer-events: none;
+  z-index: 1;
+}
+.lam-prefix-sm { font-size: 0.72rem; }
+
+.lam-input {
   width: 100%;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff; /* Force white color for text */
-  padding: 0.8rem 1rem;
-  border-radius: 12px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  padding: 0.75rem 1rem 0.75rem 2.25rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary, #f0f0f0);
+  font-size: 0.9rem;
+  transition: all 0.2s;
   outline: none;
 }
+.lam-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); background: rgba(255,255,255,0.07); }
+.lam-input-disabled { background: rgba(0,0,0,0.2) !important; color: var(--text-secondary, #9ca3af); cursor: not-allowed; }
 
-/* Ensure select options are visible */
-.loan-form-grid select option {
-  background: #1a1a2e; /* Dark background for options */
-  color: #ffffff; /* White text for options */
-  padding: 0.5rem;
-}
-
-/* Style for when select is focused or active */
-.loan-form-grid select:focus,
-.loan-form-grid select:active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-/* Fix for select dropdown arrow and text visibility */
-.loan-form-grid select {
+.lam-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(30,30,50,0.9);
+  color: var(--text-primary, #f0f0f0);
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 1rem center;
+  background-position: right 0.875rem center;
   background-size: 1em;
-  padding-right: 2.5rem;
-  background-color: rgba(30, 30, 50, 0.9); /* Fallback background color */
-  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.lam-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+.lam-select option { background: #1a1a2e; color: #fff; }
+
+/* ── Hints ──────────────────────────────────────────── */
+.lam-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #9ca3af);
+}
+.lam-hint-warn {
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-/* Ensure the selected value is visible */
-.loan-form-grid select:invalid,
-.loan-form-grid select option[value=""] {
-  color: #ffffff;
-}
-
-.loan-form-grid input:focus,
-.loan-form-grid select:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-}
-
-.loan-form-grid input:disabled,
-.loan-form-grid .input-disabled {
-  background: rgba(0, 0, 0, 0.2);
-  color: var(--text-secondary);
-  cursor: not-allowed;
-  border-color: transparent;
-  opacity: 0.8;
-}
-
-.badge-verified {
+/* ── Badges ─────────────────────────────────────────── */
+.lam-badge-verified {
   font-size: 0.7rem;
   color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 0.2rem 0.5rem;
-  border-radius: 12px;
+  background: rgba(16,185,129,0.12);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   text-transform: none;
   letter-spacing: 0;
-}
-
-.loan-info-box {
-  grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-left: 4px solid var(--primary);
-  padding: 1.25rem;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  margin-top: 0.5rem;
-}
-
-.loan-info-box p {
-  margin: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-}
-
-.loan-info-box .highlight {
-  color: #6366f1;
   font-weight: 600;
-  background: rgba(99, 102, 241, 0.1);
-  padding: 0.25rem 0.75rem;
+}
+
+.lam-badge-info {
+  font-size: 0.7rem;
+  color: #a5b4fc;
+  background: rgba(99,102,241,0.12);
+  padding: 0.15rem 0.5rem;
   border-radius: 20px;
-}
-
-/* Custom Input Icons */
-.input-with-icon {
-  position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  width: 100%;
-}
-
-.input-with-icon .input-icon {
-  position: absolute;
-  left: 1rem;
-  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0;
   font-weight: 600;
-  pointer-events: none;
-  z-index: 1;
 }
 
-.input-with-icon input {
-  padding-left: 2.5rem !important;
-}
-
-/* Professional Modal Actions */
-.loan-modal-actions {
+/* ── Actions ────────────────────────────────────────── */
+.lam-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
-.loan-modal-actions button {
-  padding: 0.8rem 1.5rem;
-  border-radius: 12px;
+.lam-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.9rem;
   font-weight: 600;
-  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  transition: all 0.2s;
 }
+.lam-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-cancel {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.lam-btn-secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary, #9ca3af);
+  border: 1px solid rgba(255,255,255,0.1);
 }
+.lam-btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: #fff; }
 
-.btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.1);
+.lam-btn-primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.3);
 }
-
-.btn-submit {
-  background: var(--primary);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.btn-submit:hover:not(:disabled) {
-  background: var(--primary-light);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-}
-
-.btn-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
+.lam-btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.45); }

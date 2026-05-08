@@ -180,6 +180,17 @@
   background: rgba(99, 102, 241, 0.2);
 }
 
+.btn-foreclose {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-foreclose:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 .empty-loans {
   text-align: center;
   padding: 4rem 2rem;

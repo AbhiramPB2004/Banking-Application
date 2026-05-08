@@ -183,6 +183,9 @@ export const loanAPI = {
   getMyLoans: () =>
     request('/loans/user/me'),
 
+  getActiveLoansSummary: () =>
+    request('/loans/active-summary'),
+
   applyForLoan: (data) =>
     request('/loans/apply', {
       method: 'POST',
@@ -206,6 +209,9 @@ export const loanAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getForeclosurePreview: (id) =>
+    request(`/loans/foreclose-preview/${id}`),
 };
 
 // ─── Credit Card API ─────────────────────────────────

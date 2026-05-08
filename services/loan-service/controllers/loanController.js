@@ -32,6 +32,20 @@ async function applyNewLoan(req, res) {
 }
 
 /**
+ * Get active loans summary (count, total EMI, remaining slots)
+ * Used by the loan application modal to pre-fill liabilities.
+ */
+async function getActiveLoansSummary(req, res) {
+  try {
+    const userId = req.user.user_id;
+    const result = await loanService.getActiveLoansSummary(userId);
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
  * Get loan details by ID
  */
 async function getLoanDetails(req, res) {
@@ -95,6 +109,20 @@ async function generateLoanSchedule(req, res) {
 }
 
 /**
+ * Get foreclosure preview — exact amounts without executing payment
+ */
+async function getForeclosurePreview(req, res) {
+  try {
+    const userId = req.user.user_id;
+    const { id } = req.params;
+    const result = await loanService.getForeclosurePreview(id, userId);
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+}
+
+/**
  * Process loan foreclosure
  */
 async function processLoanForeclosure(req, res) {
@@ -148,8 +176,10 @@ module.exports = {
   applyNewLoan,
   getLoanDetails,
   getUserLoans,
+  getActiveLoansSummary,
   makeLoanPayment,
   generateLoanSchedule,
   processLoanForeclosure,
+  getForeclosurePreview,
   updateLoanStatus,
 };

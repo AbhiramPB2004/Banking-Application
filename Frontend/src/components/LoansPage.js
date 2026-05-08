@@ -156,6 +156,13 @@ const LoansPage = () => {
                   >
                     <i className="fas fa-calendar-alt"></i> Schedule
                   </button>
+                  <button
+                    className="btn-loan-action btn-foreclose"
+                    onClick={() => setPaymentData({ type: 'foreclose', loan })}
+                    title="Close loan early with penalty"
+                  >
+                    <i className="fas fa-gavel"></i> Foreclose
+                  </button>
                 </div>
               )}
             </div>

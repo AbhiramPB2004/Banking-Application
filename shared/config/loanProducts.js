@@ -17,7 +17,8 @@ const LOAN_PRODUCTS = {
     max_amount: 2000000,
     min_tenure: 6,
     max_tenure: 60,
-    foreclosure_penalty_rate: 4, // % of outstanding
+    foreclosure_penalty_rate: 4,      // % of outstanding balance
+    prepayment_penalty_rate: 2,       // % of prepaid principal (bulk EMI)
     min_credit_score: 650,
     description: "Unsecured personal loan for any purpose",
   },
@@ -30,6 +31,7 @@ const LOAN_PRODUCTS = {
     min_tenure: 12,
     max_tenure: 360,
     foreclosure_penalty_rate: 2,
+    prepayment_penalty_rate: 1,
     min_credit_score: 700,
     description: "Secured home purchase / construction loan",
   },
@@ -42,6 +44,7 @@ const LOAN_PRODUCTS = {
     min_tenure: 12,
     max_tenure: 84,
     foreclosure_penalty_rate: 3,
+    prepayment_penalty_rate: 2,
     min_credit_score: 650,
     description: "New or used vehicle purchase loan",
   },
@@ -54,6 +57,7 @@ const LOAN_PRODUCTS = {
     min_tenure: 12,
     max_tenure: 120,
     foreclosure_penalty_rate: 1,
+    prepayment_penalty_rate: 0.5,
     min_credit_score: 600,
     description: "Higher education funding loan",
   },
