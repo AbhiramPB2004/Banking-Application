@@ -6,8 +6,10 @@ const CreditCard = require('../models/creditcard.model');
 const creditScoreCalculator = require('../utils/creditScoreCalculator');
 const accountService = require('../../../services/account-service/services/accountService');
 const Account = require('../../account-service/models/account.model');
+const auditService = require("../../audit-service/services/auditService");
 class CreditCardService {
     async applyForCreditCard(data) {
+        try{
     // 1. Eligibility check
     const eligibility = creditScoreCalculator.calculateCreditScore(data);
 
@@ -87,22 +89,51 @@ class CreditCardService {
     // 12. Create card
     const uniqueCardNumber = await this.generateUniqueCardNumber();
 
-    return await CreditCard.create({
-        user_id: data.user_id,
-        linked_account_id: data.source_account_id,
-        card_number: uniqueCardNumber,
-        card_type: data.card_tier === "premium" ? "VISA_PREMIUM" : "VISA_CLASSIC",
+    const card = await CreditCard.create({
+    user_id: data.user_id,
+    linked_account_id: data.source_account_id,
+    card_number: uniqueCardNumber,
+    card_type: data.card_tier === "premium" ? "VISA_PREMIUM" : "VISA_CLASSIC",
+    credit_limit: finalLimit,
+    available_limit: finalLimit,
+    billing_cycle_date: today.getDate(),
+    due_date: firstDueDate.toISOString().split('T')[0],
+    last_billing_date: today.toISOString().split('T')[0],
+    interest_rate: 0.0360,
+    penalty_rate: 0.0200,
+    penalty_applied: false
+});
+
+await auditService.createAuditLog({
+    user_id: data.user_id,
+    action_type: "credit_card_created",
+    entity_type: "credit_card",
+    entity_id: card.card_id,
+    status: "success",
+    metadata: {
+        card_type: card.card_type,
         credit_limit: finalLimit,
-        available_limit: finalLimit,
-        // Use actual day-of-month so billing aligns to the card's issue date
-        billing_cycle_date: today.getDate(),
-        due_date: firstDueDate.toISOString().split('T')[0],
-        last_billing_date: today.toISOString().split('T')[0],
-        interest_rate: 0.0360,
-        penalty_rate: 0.0200,
-        penalty_applied: false
-    });
+    },
+});
+
+return card;
+} catch(error) {
+
+   await auditService.createAuditLog({
+      user_id: data.user_id,
+      action_type: "credit_card_created",
+      entity_type: "credit_card",
+      entity_id: null,
+      status: "failure",
+      metadata: {
+         error: error.message,
+         requested_limit: data.requested_limit,
+      },
+   });
+
+   throw error;
 }
+    }
 
     generateCardNumber() {
         // Banking structure compliance
@@ -122,6 +153,7 @@ class CreditCardService {
     // Handles purchases and deducts from the available limit
     async processTransaction(data) {
         const { card_id, user_id, amount } = data;
+        try{
 
         // 1. Fetch the card and verify ownership
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
@@ -154,14 +186,45 @@ class CreditCardService {
 
         // 5. Save the updated numbers to PostgreSQL
         await card.save();
-
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_transaction",
+    entity_type: "credit_card",
+    entity_id: card.card_id,
+    status: "success",
+    metadata: {
+        amount: transactionAmount,
+        remaining_limit: card.available_limit,
+    },
+});
         return {
             card_id: card.card_id,
             transaction_amount: transactionAmount,
             remaining_limit: card.available_limit,
             outstanding_balance: card.outstanding_balance
         };
+    } catch(error) {
+
+
+
+        // ❌ FAILURE AUDIT
+        await auditService.createAuditLog({
+            user_id,
+            action_type: "credit_card_transaction",
+            entity_type: "credit_card",
+            entity_id: card_id,
+            status: "failure",
+            metadata: {
+                error: error.message,
+                amount,
+            },
+        });
+
+
+
+        throw error;
     }
+}
 
     // Retrieves card details safely
     async getCardById(card_id, user_id) {
@@ -198,7 +261,7 @@ class CreditCardService {
     // Make a Payment
     async repayBalance(data) {
         const { card_id, user_id, payment_amount } = data;
-
+        try{
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
         if (!card) {
             throw new Error("Credit card not found or unauthorized access");
@@ -267,7 +330,17 @@ class CreditCardService {
         }
 
         await card.save();
-
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_payment",
+    entity_type: "credit_card",
+    entity_id: card.card_id,
+    status: "success",
+    metadata: {
+        payment_amount: payment,
+        new_balance: card.outstanding_balance,
+    },
+});
         return {
             card_id: card.card_id,
             payment_applied: payment,
@@ -277,7 +350,20 @@ class CreditCardService {
             penalty_cleared: hadPenaltyBefore && card.penalty_applied === false,
             next_due_date: card.due_date
         };
+    } catch(error){
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_payment",
+    entity_type: "credit_card",
+    entity_id: card_id,
+    status: "failure",
+    metadata: {
+        error: error.message,
+        payment_amount,
+    },
+});
     }
+}
 
     // Fetch all cards for a specific user
     async getCardsByUserId(user_id) {
@@ -324,7 +410,16 @@ class CreditCardService {
 
         card.status = status;
         await card.save();
-
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_status_updated",
+    entity_type: "credit_card",
+    entity_id: card.card_id,
+    status: "success",
+    metadata: {
+        new_status: status,
+    },
+});
         return {
             card_id: card.card_id,
             new_status: card.status
@@ -341,6 +436,7 @@ class CreditCardService {
      *  5. An unapplied penalty (penalty_applied = true) blocks closure.
      */
     async closeCard(card_id, user_id) {
+        try{
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
 
         if (!card) {
@@ -379,13 +475,34 @@ class CreditCardService {
         card.status = 'closed';
         card.available_limit = 0; // No further credit available
         await card.save();
-
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_closed",
+    entity_type: "credit_card",
+    entity_id: card.card_id,
+    status: "success",
+    metadata: {
+        card_number: this.maskCardNumber(card.card_number),
+    },
+});
         return {
             card_id: card.card_id,
             new_status: 'closed',
             message: "Your credit card has been permanently closed. No further transactions will be allowed."
         };
+    } catch(error){
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_closed",
+    entity_type: "credit_card",
+    entity_id: card_id,
+    status: "failure",
+    metadata: {
+        error: error.message,
+    },
+});
     }
+}
 
     /**
      * Hard-delete a credit card record from the database.
@@ -418,7 +535,16 @@ class CreditCardService {
         }
 
         await card.destroy();
-
+        await auditService.createAuditLog({
+    user_id,
+    action_type: "credit_card_deleted",
+    entity_type: "credit_card",
+    entity_id: card_id,
+    status: "success",
+    metadata: {
+        message: "Card deleted permanently",
+    },
+});
         return {
             card_id,
             message: "Credit card record has been permanently deleted."
