@@ -42,8 +42,8 @@ async function request(endpoint, options = {}, _retry = false) {
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
 
-  // Silent token refresh on 401
-  if (response.status === 401 && !_retry) {
+  // Silent token refresh on 401, but skip for login endpoint where 401 means invalid credentials
+  if (response.status === 401 && !_retry && !endpoint.includes('/auth/login')) {
     const refreshed = await silentRefresh();
 
     if (refreshed) {

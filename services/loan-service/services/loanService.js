@@ -325,7 +325,7 @@ async function processEMIPayment({ loan_id, payment_amount, source_account_id, i
       schedule_id: pendingInstallments[0].schedule_id, // reference to first paid installment
       source_account_id,
       payment_amount: totalDue,
-      payment_type: count > 1 ? "bulk_prepayment" : "emi",
+      payment_type: count > 1 ? "partial" : "emi",
       paid_at: new Date(),
     }, { transaction });
 

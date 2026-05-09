@@ -47,12 +47,12 @@ async function updateNavValues() {
 }
 
 function startNavUpdater() {
-  cron.schedule("0 2 * * *", () => {
-    logger.info("[NAV Updater] Running daily NAV simulation...");
+  cron.schedule("*/5 * * * *", () => {
+    logger.info("[NAV Updater] Running NAV simulation every 5 minutes...");
     updateNavValues();
   });
 
-  logger.info("[NAV Updater] Cron job registered (daily at 2 AM).");
+  logger.info("[NAV Updater] Cron job registered (every 5 minutes).");
 }
 
 module.exports = {
