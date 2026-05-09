@@ -1,6 +1,6 @@
 const FD = require("../models/fd.model");
 const { calculateFD } = require("../utils/interestCalculator");
-
+const auditService = require("../../audit-service/services/auditService");
 // ✅ Import sequelize
 const { sequelize } = require("../../../shared/config/db");
 
@@ -8,6 +8,7 @@ const { sequelize } = require("../../../shared/config/db");
 const Account = sequelize.models.Account;
 
 exports.createFD = async (user_id, data) => {
+  try{
 
   // ❌ Removed interest_rate from request body
   const { account_id, amount, tenure_months } = data;
@@ -200,8 +201,39 @@ const maturity_amount =
     maturity_amount,
     maturity_date,
   });
-
+await auditService.createAuditLog({
+  user_id,
+  action_type: "fd_created",
+  entity_type: "fd",
+  entity_id: fd.id,
+  status: "success",
+  metadata: {
+    account_id,
+    principal_amount: amount,
+    interest_rate,
+    tenure_months,
+    maturity_amount,
+  },
+});
   return fd;
+} catch(error) {
+
+   await auditService.createAuditLog({
+      user_id,
+      action_type: "fd_created",
+      entity_type: "fd",
+      entity_id: null,
+      status: "failure",
+      metadata: {
+         error: error.message,
+         account_id: data.account_id,
+         amount: data.amount,
+         tenure_months: data.tenure_months,
+      },
+   });
+
+   throw error;
+}
 };
 
 exports.getFDs = async (user_id) => {
@@ -223,6 +255,7 @@ exports.getFDById = async (id, user_id) => {
 };
 
 exports.closeFD = async (id, user_id) => {
+  try{
   const fd = await FD.findOne({
     where: { id, user_id },
   });
@@ -238,6 +271,32 @@ exports.closeFD = async (id, user_id) => {
   fd.status = "CLOSED";
 
   await fd.save();
+  await auditService.createAuditLog({
+  user_id,
+  action_type: "fd_closed",
+  entity_type: "fd",
+  entity_id: fd.id,
+  status: "success",
+  metadata: {
+    fd_id: fd.id,
+    maturity_amount: fd.maturity_amount,
+  },
+});
 
   return fd;
+} catch(error) {
+
+   await auditService.createAuditLog({
+      user_id,
+      action_type: "fd_closed",
+      entity_type: "fd",
+      entity_id: id,
+      status: "failure",
+      metadata: {
+         error: error.message,
+      },
+   });
+
+   throw error;
+}
 };
