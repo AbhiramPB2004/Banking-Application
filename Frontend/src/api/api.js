@@ -148,6 +148,11 @@ export const userAPI = {
       method: 'PATCH',
       body: JSON.stringify({ target_user_id, status }),
     }),
+  resetTransactionPin: (payload) =>
+    request('/user/reset-transaction-pin', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ─── Account API ──────────────────────────────────
@@ -348,4 +353,23 @@ export const transactionAPI = {
 
   getHistory: (account_id) =>
     request(`/transactions/history/${account_id}`),
+};
+
+export const paymentTrackingAPI = {
+  getPayments: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/payments?${query}`);
+  },
+
+  getAnalytics: () =>
+    request('/payments/analytics'),
+
+  getPaymentByRef: (referenceId) =>
+    request(`/payments/${referenceId}`),
+
+  createPayment: (data) =>
+    request('/payments/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };

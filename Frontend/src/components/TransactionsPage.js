@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { accountAPI, transactionAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
@@ -8,9 +8,7 @@ const TransactionsPage = () => {
   const { showToast } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('transfer');
 
@@ -24,67 +22,51 @@ const TransactionsPage = () => {
     description: ''
   });
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     try {
       const res = await accountAPI.getMyAccounts();
-
       if (res.success) {
         setAccounts(res.data || []);
-
         if (res.data?.length > 0) {
           setFormData(prev => ({
             ...prev,
             source_account_id: res.data[0].account_id
           }));
-
           setSelectedAccountId(res.data[0].account_id);
         }
       }
-
     } catch (err) {
-
       showToast('error', 'Failed to load accounts');
-
     } finally {
-
       setLoading(false);
-
     }
-  };
+  }, [showToast]);
 
-  const fetchHistory = async (id) => {
+  const fetchHistory = useCallback(async (id) => {
     if (!id) return;
-
-    setHistoryLoading(true);
-
+    // Removed setHistoryLoading since it was unused
     try {
-
       const res = await transactionAPI.getHistory(id);
-
       if (res.success) {
-        setHistory(res.data || []);
+        // Removed setHistory since it was unused
+        console.log('Transaction history fetched:', res.data);
       }
-
     } catch (err) {
-
       showToast('error', 'Failed to load transaction history');
-
     } finally {
-
-      setHistoryLoading(false);
-
+      // Removed setHistoryLoading since it was unused
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
 
   useEffect(() => {
     if (selectedAccountId) {
       fetchHistory(selectedAccountId);
     }
-  }, [selectedAccountId]);
+  }, [selectedAccountId, fetchHistory]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -198,74 +180,71 @@ const TransactionsPage = () => {
         <p>Transfer funds, deposit or withdraw money from your accounts</p>
       </div>
 
-      <div className="transaction-tabs">
-        <button 
-          className={`tab-btn ${activeTab === 'transfer' ? 'active' : ''}`}
-          onClick={() => setActiveTab('transfer')}
-        >
-          <i className="fas fa-exchange-alt" /> Transfer
-        </button>
-
-        <button 
-          className={`tab-btn ${activeTab === 'deposit' ? 'active' : ''}`}
-          onClick={() => setActiveTab('deposit')}
-        >
-          <i className="fas fa-arrow-down" /> Deposit
-        </button>
-
-        <button 
-          className={`tab-btn ${activeTab === 'withdraw' ? 'active' : ''}`}
-          onClick={() => setActiveTab('withdraw')}
-        >
-          <i className="fas fa-arrow-up" /> Withdraw
-        </button>
-      </div>
-
       <div className="transactions-grid">
-
         <div className="transaction-card">
+          <div className="transaction-tabs-header">
+            <div className="tab-glider" style={{
+              transform: `translateX(${activeTab === 'transfer' ? '0' : activeTab === 'deposit' ? '100%' : '200%'})`
+            }} />
+            <button
+              className={`tab-btn ${activeTab === 'transfer' ? 'active' : ''}`}
+              onClick={() => setActiveTab('transfer')}
+            >
+              <i className="fas fa-exchange-alt" /> Transfer
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'deposit' ? 'active' : ''}`}
+              onClick={() => setActiveTab('deposit')}
+            >
+              <i className="fas fa-arrow-down" /> Deposit
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'withdraw' ? 'active' : ''}`}
+              onClick={() => setActiveTab('withdraw')}
+            >
+              <i className="fas fa-arrow-up" /> Withdraw
+            </button>
+          </div>
 
-          <h2>
-            <i className={`fas ${
-              activeTab === 'transfer'
-                ? 'fa-exchange-alt'
-                : activeTab === 'deposit'
-                ? 'fa-arrow-down'
-                : 'fa-arrow-up'
-            }`} />
-
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Funds
-          </h2>
+          <div className="card-content-header">
+            <h2>
+              <i className={`fas ${activeTab === 'transfer'
+                  ? 'fa-exchange-alt'
+                  : activeTab === 'deposit'
+                    ? 'fa-arrow-down'
+                    : 'fa-arrow-up'
+                }`} />
+              {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Funds
+            </h2>
+          </div>
 
           <form onSubmit={handleSubmit}>
 
-            <div className="form-group">
-              <label>Select Account</label>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Select Account</label>
+                <select
+                  name="source_account_id"
+                  className="account-selector"
+                  value={formData.source_account_id}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    setSelectedAccountId(e.target.value);
+                  }}
+                  required
+                >
+                  {accounts.map(acc => (
+                    <option key={acc.account_id} value={acc.account_id}>
+                      {acc.account_number} ({acc.account_type}) - ₹
+                      {parseFloat(acc.balance).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <select
-                name="source_account_id"
-                className="account-selector"
-                value={formData.source_account_id}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  setSelectedAccountId(e.target.value);
-                }}
-                required
-              >
-                {accounts.map(acc => (
-                  <option key={acc.account_id} value={acc.account_id}>
-                    {acc.account_number} ({acc.account_type}) - ₹
-                    {parseFloat(acc.balance).toLocaleString()}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {activeTab === 'transfer' && (
-              <>
+              {activeTab === 'transfer' ? (
                 <div className="form-group">
                   <label>Recipient Account Number</label>
-
                   <input
                     type="text"
                     name="target_account_number"
@@ -276,10 +255,43 @@ const TransactionsPage = () => {
                     required
                   />
                 </div>
+              ) : (
+                <div className="form-group">
+                  <label>Amount (₹)</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    className="input-field"
+                    placeholder="0.00"
+                    min="1"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            {activeTab === 'transfer' && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Amount (₹)</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    className="input-field"
+                    placeholder="0.00"
+                    min="1"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
 
                 <div className="form-group">
                   <label>Transfer Type</label>
-
                   <select
                     name="transfer_type"
                     className="input-field"
@@ -292,57 +304,40 @@ const TransactionsPage = () => {
                     <option value="rtgs">RTGS (High value)</option>
                   </select>
                 </div>
-              </>
-            )}
-
-            <div className="form-group">
-              <label>Amount (₹)</label>
-
-              <input
-                type="number"
-                name="amount"
-                className="input-field"
-                placeholder="0.00"
-                min="1"
-                step="0.01"
-                value={formData.amount}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            {activeTab === 'transfer' && (
-              <div className="form-group">
-                <label>Description (Optional)</label>
-
-                <input
-                  type="text"
-                  name="description"
-                  className="input-field"
-                  placeholder="Rent, Food, etc."
-                  value={formData.description}
-                  onChange={handleInputChange}
-                />
               </div>
             )}
 
-            <div className="form-group">
-              <label>Transaction PIN</label>
+            <div className="form-row">
+              {activeTab === 'transfer' && (
+                <div className="form-group">
+                  <label>Description (Optional)</label>
+                  <input
+                    type="text"
+                    name="description"
+                    className="input-field"
+                    placeholder="Rent, Food, etc."
+                    value={formData.description}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              )}
 
-              <input
-                type="password"
-                name="transaction_pin"
-                className="input-field"
-                placeholder="Enter 4 or 6-digit PIN"
-                maxLength="6"
-                value={formData.transaction_pin}
-                onChange={handleInputChange}
-                required
-              />
-
-              <p className="pin-hint">
-                Enter your secure transaction PIN to authorize
-              </p>
+              <div className="form-group">
+                <label>Transaction PIN</label>
+                <input
+                  type="password"
+                  name="transaction_pin"
+                  className="input-field"
+                  placeholder="Enter 4 or 6-digit PIN"
+                  maxLength="6"
+                  value={formData.transaction_pin}
+                  onChange={handleInputChange}
+                  required
+                />
+                <p className="pin-hint">
+                  Secure authorization required
+                </p>
+              </div>
             </div>
 
             <button

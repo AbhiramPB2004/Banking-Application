@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
 
@@ -19,6 +19,16 @@ import AdminPanel from './components/AdminPanel';
 import RegisterModal from './components/RegisterModal';
 import LoginModal from './components/LoginModal';
 import TransactionsPage from './components/TransactionsPage';
+import PaymentTrackingPage from './components/PaymentTrackingPage';
+
+const Layout = () => (
+  <div className="app-layout">
+    <Sidebar />
+    <div className="main-content animate-fade">
+      <Outlet />
+    </div>
+  </div>
+);
 
 function AppContent() {
   const { isLoggedIn, isLoading, toast } = useAuth();
@@ -122,6 +132,15 @@ function AppContent() {
           <ProtectedRoute>
             <div className="app-layout"><div className="main-content animate-fade">
               <TransactionsPage />
+            </div></div>
+          </ProtectedRoute>
+        } />
+
+
+        <Route path="/payment-tracking" element={
+          <ProtectedRoute>
+            <div className="app-layout"><div className="main-content animate-fade">
+              <PaymentTrackingPage />
             </div></div>
           </ProtectedRoute>
         } />

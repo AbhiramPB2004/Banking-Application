@@ -6,6 +6,8 @@ const CreditCard = require('../models/creditcard.model');
 const creditScoreCalculator = require('../utils/creditScoreCalculator');
 const accountService = require('../../../services/account-service/services/accountService');
 const Account = require('../../account-service/models/account.model');
+const paymentTrackingService = require("../../payment-tracking-service/services/paymentTracking.service");
+
 class CreditCardService {
     async applyForCreditCard(data) {
     // 1. Eligibility check
@@ -64,8 +66,6 @@ class CreditCardService {
     }
 
     // 10. Final limit
-    // Bug fix: if the user requested a specific amount, honour it as the cap.
-    // Previously, finalLimit always defaulted to systemLimit, ignoring the user's request.
     let finalLimit = systemLimit;
 
     if (requested > 0) {
@@ -74,7 +74,6 @@ class CreditCardService {
                 `Requested limit exceeds your eligible limit of ₹${Math.floor(systemLimit).toLocaleString('en-IN')}`
             );
         }
-        // Apply user's requested cap — they may want less than the max
         finalLimit = requested;
     }
 
@@ -94,7 +93,6 @@ class CreditCardService {
         card_type: data.card_tier === "premium" ? "VISA_PREMIUM" : "VISA_CLASSIC",
         credit_limit: finalLimit,
         available_limit: finalLimit,
-        // Use actual day-of-month so billing aligns to the card's issue date
         billing_cycle_date: today.getDate(),
         due_date: firstDueDate.toISOString().split('T')[0],
         last_billing_date: today.toISOString().split('T')[0],
@@ -105,11 +103,9 @@ class CreditCardService {
 }
 
     generateCardNumber() {
-        // Banking structure compliance
         return Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
     }
 
-    // Generates a card number that is guaranteed to be unique in the database
     async generateUniqueCardNumber(maxAttempts = 10) {
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             const candidate = this.generateCardNumber();
@@ -121,7 +117,7 @@ class CreditCardService {
 
     // Handles purchases and deducts from the available limit
     async processTransaction(data) {
-        const { card_id, user_id, amount } = data;
+        const { card_id, user_id, amount, merchant_name, category, description } = data;
 
         // 1. Fetch the card and verify ownership
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
@@ -129,21 +125,16 @@ class CreditCardService {
             throw new Error("Credit card not found or unauthorized");
         }
 
-        // 2. Security Check: Is the card active?
         if (card.status !== 'active') {
             throw new Error("Cannot process transaction: Card is not active");
         }
 
-        // 3. Financial Math: Check limits
         const transactionAmount = parseFloat(amount);
-
-        // Guard: amount must be present and positive
         if (!amount || isNaN(transactionAmount) || transactionAmount <= 0) {
             throw new Error("Transaction amount must be a positive number");
         }
 
         const availableLimit = parseFloat(card.available_limit);
-
         if (availableLimit < transactionAmount) {
             throw new Error("Transaction declined: Insufficient available credit limit");
         }
@@ -151,9 +142,26 @@ class CreditCardService {
         // 4. Update the balances
         card.available_limit = availableLimit - transactionAmount;
         card.outstanding_balance = parseFloat(card.outstanding_balance) + transactionAmount;
-
-        // 5. Save the updated numbers to PostgreSQL
         await card.save();
+
+        // 5. Track the purchase
+        try {
+            await paymentTrackingService.createPaymentRecord({
+                user_id: user_id,
+                payment_type: "CREDIT_CARD",
+                transaction_type: "PURCHASE",
+                merchant_name: merchant_name || "Online Merchant",
+                category: category || "Shopping",
+                amount: transactionAmount,
+                status: "SUCCESS",
+                payment_method: "CARD",
+                reference_id: `CARD-PUR-${card_id}-${Date.now()}`,
+                related_entity_id: card_id.toString(),
+                description: description || `Credit Card purchase at ${merchant_name || 'Merchant'}`,
+            });
+        } catch (trackError) {
+            console.error("Purchase tracking failed:", trackError.message);
+        }
 
         return {
             card_id: card.card_id,
@@ -165,7 +173,6 @@ class CreditCardService {
 
     // Retrieves card details safely
     async getCardById(card_id, user_id) {
-        // Fetch the card and verify the user actually owns it
         const card = await CreditCard.findOne({
             where: { card_id, user_id }
         });
@@ -204,29 +211,22 @@ class CreditCardService {
             throw new Error("Credit card not found or unauthorized access");
         }
 
-        // Block payments on closed cards
         if (card.status === 'closed') {
             throw new Error("Cannot process payment: Card is permanently closed");
         }
 
         const payment = parseFloat(payment_amount);
-
         const previousBalance = parseFloat(card.outstanding_balance);
-
-        // Capture penalty state BEFORE any changes
         const hadPenaltyBefore = card.penalty_applied === true;
 
-        // Guard: payment must be positive
         if (payment <= 0) {
             throw new Error("Payment amount must be greater than zero");
         }
 
-        // Guard: nothing to pay — avoids confusing "exceeds" error on zero-balance cards
         if (previousBalance <= 0) {
             throw new Error("No outstanding balance to repay on this card");
         }
 
-        // Guard: payment cannot exceed outstanding balance
         if (payment > previousBalance) {
             throw new Error(`Payment amount ₹${payment} exceeds outstanding balance ₹${previousBalance.toFixed(2)}`);
         }
@@ -235,29 +235,20 @@ class CreditCardService {
         card.outstanding_balance = previousBalance - payment;
         card.available_limit = parseFloat(card.available_limit) + payment;
 
-        /**
-         * If balance fully cleared → reset penalty flag + advance due date 30 days
-         * If partial payment → keep penalty_applied as-is, due date unchanged
-         */
         if (card.outstanding_balance <= 0) {
             card.outstanding_balance = 0;
-            card.available_limit = parseFloat(card.credit_limit); // Restore full limit
+            card.available_limit = parseFloat(card.credit_limit);
             card.penalty_applied = false;
             card.minimum_due = 0;
             const nextDue = new Date();
             nextDue.setDate(nextDue.getDate() + 30);
             card.due_date = nextDue.toISOString().split('T')[0];
         } else {
-            // Bug fix: cap available_limit at credit_limit.
-            // Interest inflation can push outstanding_balance > credit_limit, so
-            // available_limit += payment could theoretically overshoot credit_limit.
             const creditLimit = parseFloat(card.credit_limit);
             if (card.available_limit > creditLimit) {
                 card.available_limit = creditLimit;
             }
 
-            // Bug fix: reduce minimum_due when partial payment covers or exceeds it.
-            // Previously minimum_due stayed stale after any partial payment.
             const currentMinDue = parseFloat(card.minimum_due);
             if (payment >= currentMinDue) {
                 card.minimum_due = 0;
@@ -267,6 +258,25 @@ class CreditCardService {
         }
 
         await card.save();
+
+        // ── Track Repayment ────────────────────────────────────────────────
+        try {
+            await paymentTrackingService.createPaymentRecord({
+                user_id: user_id,
+                payment_type: "CREDIT_CARD",
+                transaction_type: "PAYMENT",
+                merchant_name: "Self Repayment",
+                category: "Finance",
+                amount: payment,
+                status: "SUCCESS",
+                payment_method: "BANK_TRANSFER",
+                reference_id: `CARD-PAY-${card_id}-${Date.now()}`,
+                related_entity_id: card_id.toString(),
+                description: `Credit Card Repayment for Card ending in ${card.card_number.slice(-4)}`,
+            });
+        } catch (trackError) {
+            console.error("Payment tracking failed:", trackError.message);
+        }
 
         return {
             card_id: card.card_id,
@@ -285,7 +295,6 @@ class CreditCardService {
             where: { user_id }
         });
 
-        // Map to return safe data for each card
         return cards.map(card => ({
             card_id: card.card_id,
             card_number: this.maskCardNumber(card.card_number),
@@ -298,26 +307,17 @@ class CreditCardService {
         }));
     }
 
-    // Block / Unblock only (does NOT handle close — use closeCard() for that)
     async updateCardStatus(card_id, user_id, status) {
-        // Enforce ownership check for status transitions
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
-
         if (!card) {
             throw new Error("Credit card not found or unauthorized access");
         }
-
-        // Block any action on already closed card
         if (card.status === 'closed') {
             throw new Error("Cannot modify card: Card is permanently closed");
         }
-
-        // Prevent close via this method — closeCard() must be used instead
         if (status === 'closed') {
             throw new Error("Use the dedicated close endpoint to close a card");
         }
-
-        // Block if already in requested status
         if (card.status === status) {
             throw new Error(`Card is already ${status}`);
         }
@@ -331,53 +331,34 @@ class CreditCardService {
         };
     }
 
-    /**
-     * Close a credit card — soft-delete (status → 'closed').
-     * Edge cases enforced:
-     *  1. Card must exist and belong to the user.
-     *  2. Card must not already be closed.
-     *  3. Outstanding balance must be ZERO before closure is permitted.
-     *  4. Any unpaid minimum_due also blocks closure.
-     *  5. An unapplied penalty (penalty_applied = true) blocks closure.
-     */
     async closeCard(card_id, user_id) {
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
-
         if (!card) {
             throw new Error("Credit card not found or unauthorized access");
         }
-
-        // 1. Already closed
         if (card.status === 'closed') {
             throw new Error("Card is already permanently closed");
         }
-
-        // 2. Outstanding balance check
         const outstanding = parseFloat(card.outstanding_balance);
         if (outstanding > 0) {
             throw new Error(
                 `Cannot close card: You have an outstanding balance of ₹${outstanding.toLocaleString('en-IN')}. Please clear all dues before closing.`
             );
         }
-
-        // 3. Minimum due check
         const minimumDue = parseFloat(card.minimum_due);
         if (minimumDue > 0) {
             throw new Error(
                 `Cannot close card: You have a minimum due of ₹${minimumDue.toLocaleString('en-IN')} pending. Please pay it before closing.`
             );
         }
-
-        // 4. Penalty check
         if (card.penalty_applied === true) {
             throw new Error(
                 "Cannot close card: A late-payment penalty is currently applied on this card. Please repay the outstanding balance first."
             );
         }
 
-        // All checks passed — soft-close the card
         card.status = 'closed';
-        card.available_limit = 0; // No further credit available
+        card.available_limit = 0;
         await card.save();
 
         return {
@@ -387,29 +368,14 @@ class CreditCardService {
         };
     }
 
-    /**
-     * Hard-delete a credit card record from the database.
-     * This is a destructive operation and has strict guards:
-     *  1. Card must exist and belong to the user.
-     *  2. Card must be in 'closed' status (must close first).
-     *  3. Outstanding balance must be zero.
-     * This ensures no financial record is wiped while debt exists.
-     */
     async deleteCard(card_id, user_id) {
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
-
         if (!card) {
             throw new Error("Credit card not found or unauthorized access");
         }
-
-        // 1. Must be closed before deletion
         if (card.status !== 'closed') {
-            throw new Error(
-                "Card must be closed before it can be deleted. Please close the card first."
-            );
+            throw new Error("Card must be closed before it can be deleted. Please close the card first.");
         }
-
-        // 2. Final outstanding balance guard (belt-and-suspenders)
         const outstanding = parseFloat(card.outstanding_balance);
         if (outstanding > 0) {
             throw new Error(
@@ -418,14 +384,13 @@ class CreditCardService {
         }
 
         await card.destroy();
-
         return {
             card_id,
             message: "Credit card record has been permanently deleted."
         };
     }
 
-    // Generate a simple statement summary
+    // Generate a detailed statement with transaction history
     async getCardStatement(card_id, user_id) {
         const card = await CreditCard.findOne({ where: { card_id, user_id } });
 
@@ -433,21 +398,29 @@ class CreditCardService {
             throw new Error("Credit card not found or unauthorized access");
         }
 
+        // Fetch transactions related to this card from payment tracking
+        const transactionData = await paymentTrackingService.getUserPayments(user_id, {
+            related_entity_id: card_id.toString(),
+            payment_type: "CREDIT_CARD",
+            status: "SUCCESS"
+        }, { limit: 100 });
+
         return {
             card_id: card.card_id,
             card_number: this.maskCardNumber(card.card_number),
             statement_date: new Date().toISOString().split('T')[0],
             outstanding_balance: parseFloat(card.outstanding_balance),
             available_limit: parseFloat(card.available_limit),
+            total_limit: parseFloat(card.credit_limit),
             minimum_due: parseFloat(card.minimum_due),
             due_date: card.due_date,
             billing_cycle_date: card.billing_cycle_date,
             status: card.status,
+            transactions: transactionData.payments || [],
             message: "Monthly statement summary compiled successfully"
         };
     }
 
-    // Helper: Mask all but last 4 digits of card number
     maskCardNumber(cardNumber) {
         if (!cardNumber || cardNumber.length < 4) return cardNumber;
         return "**** **** **** " + cardNumber.slice(-4);

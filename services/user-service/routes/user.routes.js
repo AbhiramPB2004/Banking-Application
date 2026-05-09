@@ -31,5 +31,6 @@ router.patch("/status", userController.updateUserStatus);
 
 /* Get all users */
 router.get("/all", userController.getAllUsers);
+router.post("/reset-transaction-pin", userController.resetTransactionPin);
 
 module.exports = router; 

@@ -9,6 +9,14 @@ const ProfilePage = () => {
   const [editingKYC, setEditingKYC] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // PIN Reset State
+  const [showPinReset, setShowPinReset] = useState(false);
+  const [pinData, setPinData] = useState({
+    password: '',
+    newPin: '',
+    confirmPin: ''
+  });
+
   const [profile, setProfile] = useState({
     full_name: currentUser?.full_name || '',
     phone: currentUser?.phone || '',
@@ -51,13 +59,45 @@ const ProfilePage = () => {
     }
   };
 
+  const handlePinReset = async (e) => {
+    e.preventDefault();
+
+    // Validation
+    if (pinData.newPin !== pinData.confirmPin) {
+      return showToast('error', 'New PIN and Confirm PIN do not match');
+    }
+
+    if (!/^\d{4,6}$/.test(pinData.newPin)) {
+      return showToast('error', 'PIN must be 4 to 6 numeric digits');
+    }
+
+    const weakPins = ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "1234", "123456"];
+    if (weakPins.includes(pinData.newPin)) {
+      return showToast('error', 'PIN is too weak. Please choose a more secure PIN.');
+    }
+
+    setLoading(true);
+    try {
+      await userAPI.resetTransactionPin({
+        password: pinData.password,
+        newPin: pinData.newPin
+      });
+      showToast('success', 'Transaction PIN has been reset successfully');
+      setShowPinReset(false);
+      setPinData({ password: '', newPin: '', confirmPin: '' });
+    } catch (err) {
+      showToast('error', err.data?.message || 'Failed to reset transaction PIN');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const kycStatusColor = {
     verified: 'badge-success',
     pending: 'badge-warning',
     rejected: 'badge-danger',
   };
 
-  // Check if KYC is verified - if yes, disable editing
   const isKYCVerified = currentUser?.kyc_status === 'verified';
   const isKYCRejected = currentUser?.kyc_status === 'rejected';
 
@@ -180,8 +220,8 @@ const ProfilePage = () => {
 
         <div style={{ marginTop: '12px' }}>
           {!editingKYC ? (
-            <button 
-              className="btn btn-secondary btn-sm" 
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => setEditingKYC(true)}
               disabled={isKYCVerified}
               title={isKYCVerified ? "KYC is already verified and cannot be edited" : "Update KYC information"}>
@@ -190,28 +230,86 @@ const ProfilePage = () => {
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setEditingKYC(false)}>Cancel</button>
-              <button 
-                className="btn btn-primary btn-sm" 
-                onClick={handleKYCSave} 
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleKYCSave}
                 disabled={loading || isKYCVerified}>
                 {loading ? <div className="loading-spinner sm" /> : <><i className="fas fa-save" /> Save KYC</>}
               </button>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Info message for verified KYC */}
-        {isKYCVerified && (
-          <div style={{ marginTop: '12px' }} className="alert alert-info">
-            <i className="fas fa-check-circle"></i> Your KYC is already verified. You cannot modify KYC details once verified.
-          </div>
-        )}
+      {/* Transaction PIN Settings Section */}
+      <div className="profile-section">
+        <div className="section-title-row">
+          <h3><i className="fas fa-key" /> Transaction PIN Settings</h3>
+        </div>
 
-        {/* Info message for rejected KYC */}
-        {isKYCRejected && (
-          <div style={{ marginTop: '12px' }} className="alert alert-warning">
-            <i className="fas fa-exclamation-triangle"></i> Your KYC was rejected. Please update your information for re-verification.
+        {!showPinReset ? (
+          <div className="pin-settings-view">
+            <p className="text-secondary font-sm mb-3">
+              Your transaction PIN is used to authorize transfers and payments.
+            </p>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowPinReset(true)}>
+              <i className="fas fa-unlock-alt" /> Forgot Transaction PIN?
+            </button>
           </div>
+        ) : (
+          <form className="pin-reset-form animate-fade" onSubmit={handlePinReset}>
+            <p className="font-bold mb-3">Reset Transaction PIN</p>
+
+            <div className="input-group">
+              <label>Account Password</label>
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Enter account password"
+                value={pinData.password}
+                onChange={(e) => setPinData({ ...pinData, password: e.target.value })}
+                required
+              />
+              <div className="security-hint">
+                <i className="fas fa-shield-alt" /> Required for identity verification
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>New Transaction PIN</label>
+              <input
+                type="password"
+                className="input-field"
+                placeholder="4 or 6 digit PIN"
+                maxLength="6"
+                value={pinData.newPin}
+                onChange={(e) => setPinData({ ...pinData, newPin: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Confirm New PIN</label>
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Confirm your new PIN"
+                maxLength="6"
+                value={pinData.confirmPin}
+                onChange={(e) => setPinData({ ...pinData, confirmPin: e.target.value })}
+                required
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowPinReset(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={loading}>
+                {loading ? <div className="loading-spinner sm" /> : 'Reset PIN'}
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>

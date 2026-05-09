@@ -1,6 +1,7 @@
 const User = require("../models/user.model");
 const { Op } = require("sequelize");
-
+const { comparePassword } = require("../../../shared/security/passwordPolicy");
+const { hashTransactionPin, validateTransactionPin } = require("../../../shared/security/transactionPinPolicy");
 /**
  * Check duplicate user
  */
@@ -230,6 +231,34 @@ async function updateKYCStatus(user_id, data) {
 }
 
 
+async function resetTransactionPin(user_id, accountPassword, newPin) {
+  const user = await User.findByPk(user_id);
+  if (!user) throw new Error("User not found.");
+
+  // 1. Verify account password
+  const isPasswordValid = await comparePassword(accountPassword, user.password_hash);
+  if (!isPasswordValid) {
+    throw new Error("Incorrect account password.");
+  }
+
+  // 2. Validate new PIN
+  const pinValidation = validateTransactionPin(newPin);
+  if (!pinValidation.valid) {
+    throw new Error(pinValidation.message);
+  }
+
+  // 3. Check weak patterns
+  const weakPins = ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "1234", "123456"];
+  if (weakPins.includes(newPin)) {
+    throw new Error("PIN is too weak. Please choose a more secure PIN.");
+  }
+
+  // 4. Update PIN
+  user.transaction_pin_hash = await hashTransactionPin(newPin);
+  await user.save();
+
+  return true;
+}
 /**
  * Verify KYC (Admin)
  */
@@ -313,4 +342,5 @@ module.exports = {
   closeUser,
   getAllUsers,
   verifyKYC,
+  resetTransactionPin,
 };

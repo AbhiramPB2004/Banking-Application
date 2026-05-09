@@ -46,6 +46,10 @@ const adminRoutes = require(
   "../services/admin-service/routes/admin.routes"
 );
 
+const paymentTrackingRoutes = require(
+  "../services/payment-tracking-service/routes/paymentTracking.routes"
+);
+
 app.use(
   "/admin",
   authenticateToken,
@@ -95,6 +99,12 @@ app.use(
   "/investments",
   authenticateToken,
   investmentRoutes
+);
+
+app.use(
+  "/payments",
+  authenticateToken,
+  paymentTrackingRoutes
 );
 
 // Initialize Loan Service Jobs

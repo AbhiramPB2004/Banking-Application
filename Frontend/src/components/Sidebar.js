@@ -15,6 +15,7 @@ const Sidebar = () => {
     { path: '/investments', icon: 'fa-chart-line', label: 'Investments' },
     { path: '/fd', icon: 'fa-certificate', label: 'Fixed Deposits' }, // Added FD link
     { path: '/profile', icon: 'fa-user-circle', label: 'Profile' },
+    { path: '/payment-tracking', icon: 'fa-t', label: 'Payment Tracking' },
 
   ];
 

@@ -1,132 +1,430 @@
+/* Premium Redesign for Credit Card Statement Modal */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 .statement-modal {
-    background: linear-gradient(135deg, #1e1e2f 0%, #11111c 100%);
-    border-radius: 24px;
+    background: var(--bg-card);
+    color-scheme: dark;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    color: white;
-    overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-    animation: slideUp 0.3s ease;
-}
-
-/* HEADER */
-.statement-modal .modal-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.statement-modal .modal-header h2 {
-    color: white;
-    margin: 0;
-}
-
-.statement-modal .modal-header p {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.9rem;
-}
-
-/* CARD BODY */
-.statement-card {
-    padding: 1.5rem;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+    animation: slideScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    position: relative;
 }
 
-/* ROW */
-.statement-row {
+@keyframes slideScaleIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Header ── */
+.modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.2rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.2s ease;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.1);
 }
 
-.statement-row:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateY(-1px);
-}
-
-.statement-row span {
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 0.9rem;
-}
-
-.statement-row strong {
-    color: white;
-    font-size: 1rem;
+.modal-header h2 {
+    font-size: 1.25rem;
     font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
 }
 
-/* HIGHLIGHTS */
-.statement-highlight {
-    color: #6366f1 !important;
+.modal-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 4px 0 0;
 }
 
-.statement-warning {
-    color: #f59e0b !important;
-}
-
-.statement-success {
-    color: #22c55e !important;
-}
-
-.statement-danger {
-    color: #ef4444 !important;
-}
-
-/* MESSAGE */
-.statement-message {
-    margin: 0 1.5rem 1.5rem;
-    padding: 1rem 1.2rem;
-    border-radius: 14px;
-    background: rgba(99, 102, 241, 0.08);
-    border: 1px solid rgba(99, 102, 241, 0.15);
-    color: rgba(255, 255, 255, 0.85);
-    line-height: 1.6;
-    font-size: 0.95rem;
-}
-
-/* FOOTER */
-.statement-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* CLOSE BUTTON */
-.statement-close-btn {
-    background: rgba(255, 255, 255, 0.08);
+.btn-close {
+    background: rgba(255, 255, 255, 0.05);
     border: none;
-    color: white;
-    padding: 0.7rem 1.4rem;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-close:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* ── Summary Grid ── */
+.statement-header-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: rgba(255, 255, 255, 0.01);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.summary-item label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
     font-weight: 600;
 }
 
-.statement-close-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
+.summary-item span {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
-/* MOBILE */
-@media (max-width: 768px) {
+.summary-item .accent {
+    color: #6366f1;
+}
 
-    .statement-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
+.summary-item .danger {
+    color: #f87171;
+}
+
+/* ── Controls ── */
+.statement-controls {
+    padding: 1rem 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.statement-filters {
+    display: flex;
+    gap: 1rem;
+}
+
+.filter-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.filter-group i {
+    position: absolute;
+    left: 12px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.filter-input {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #ffffff !important;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.75rem 0.6rem 2.2rem;
+    outline: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.filter-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.filter-input:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+select.filter-input option {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 10px;
+}
+
+.search-group {
+    flex-grow: 1;
+}
+
+.search-group .filter-input {
+    width: 100%;
+}
+
+/* ── Body (Scrolling Table) ── */
+.statement-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0;
+    background: var(--bg-card);
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.statement-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.statement-table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-surface);
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    z-index: 10;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.statement-table td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+}
+
+.statement-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.merchant-name {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.category {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.txn-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.type-purchase {
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+}
+
+.type-payment {
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
+}
+
+.type-refund {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+}
+
+.txn-status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.status-dot.success {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.status-dot.failed {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.status-dot.pending {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.status-text {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.txn-amount {
+    font-weight: 700;
+    font-size: 1rem;
+    white-space: nowrap;
+    /* Prevents sign and amount from splitting lines */
+}
+
+.amount-debit {
+    color: #fca5a5;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.amount-credit {
+    color: #86efac;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.txn-ref-id {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* ── Footer ── */
+.statement-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.footer-info i {
+    color: #6366f1;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Empty State ── */
+.empty-statement {
+    padding: 5rem 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.empty-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+/* ── Mobile Optimization ── */
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: 0;
     }
 
     .statement-modal {
-        border-radius: 18px;
+        max-height: 100vh;
+        border-radius: 0;
     }
 
-    .statement-card {
-        padding: 1rem;
+    .statement-header-summary {
+        grid-template-columns: 1fr 1fr;
+        padding: 1rem 1.5rem;
+    }
+
+    .statement-filters {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .statement-table th:nth-child(4),
+    .statement-table td:nth-child(4),
+    .statement-table th:nth-child(6),
+    .statement-table td:nth-child(6) {
+        display: none;
+    }
+
+    .txn-amount {
+        font-size: 0.9rem;
+    }
+
+    .statement-footer {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
     }
 }

@@ -23,7 +23,8 @@ const LoanPaymentModal = ({ type, loan, onClose, onSuccess }) => {
 
   // Pending installments from schedule
   const pending = schedule.filter(r => r.status === 'upcoming' || r.status === 'overdue');
-  const maxInstallments = pending.length;
+  // Limit bulk EMI to 12 months. If more is needed, foreclosure is required.
+  const maxInstallments = Math.min(12, pending.length);
   const selected = pending.slice(0, installmentCount);
 
   // ── Payment breakdown ──────────────────────────────────────────────────
@@ -31,10 +32,15 @@ const LoanPaymentModal = ({ type, loan, onClose, onSuccess }) => {
   const extraPrincipal = parseFloat(
     selected.slice(1).reduce((s, r) => s + parseFloat(r.principal_component), 0).toFixed(2)
   );
-  // Prepayment penalty rate comes from the first schedule row's loan context,
-  // but we don't have it here — we use a safe fallback of 2% and show an info note.
-  // The backend recalculates authoritatively anyway.
-  const PREPAYMENT_RATE = loan.prepayment_penalty_rate ?? 2;
+  // Prepayment penalty rate lookup to sync with backend config
+  const productRates = {
+    personal: 2,
+    home: 1,
+    vehicle: 2,
+    education: 0,
+    gold: 1
+  };
+  const PREPAYMENT_RATE = loan.prepayment_penalty_rate ?? productRates[loan.loan_type?.toLowerCase()] ?? 2;
   const penaltyAmount = installmentCount > 1
     ? parseFloat(((extraPrincipal * PREPAYMENT_RATE) / 100).toFixed(2))
     : 0;

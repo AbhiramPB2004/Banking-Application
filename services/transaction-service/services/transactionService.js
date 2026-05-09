@@ -2,6 +2,7 @@ const { sequelize } = require("../../../shared/config/db");
 const Account = require("../../account-service/models/account.model");
 const Transaction = require("../models/transaction.model");
 const { Op } = require("sequelize");
+const paymentTrackingService = require("../../payment-tracking-service/services/paymentTracking.service");
 
 /**
  * 🔐 OWNERSHIP VALIDATION
@@ -99,8 +100,23 @@ async function processInternalTransfer({
     );
 
     await t.commit();
-    return txn;
 
+    // ── Auto-track Payment ────────────────────────────────────────────────
+    try {
+      await paymentTrackingService.createPaymentRecord({
+        user_id: user_id,
+        payment_type: "TRANSFER",
+        amount: amount,
+        status: "SUCCESS",
+        payment_method: "BANK_TRANSFER",
+        reference_id: txn.reference_id,
+        related_entity_id: txn.transaction_id,
+        description: `Internal Transfer from ${from_account_number} to ${to_account_number}`,
+      });
+    } catch (trackError) {
+      console.error("Payment tracking failed for Transfer:", trackError.message);
+    }
+    return txn;
   } catch (err) {
     await t.rollback();
     throw err;

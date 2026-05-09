@@ -3,68 +3,95 @@
 .transactions-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
 }
 
 .transactions-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
-}
-
-@media (max-width: 992px) {
-  .transactions-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .transaction-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  height: fit-content;
+  border-radius: 24px;
+  padding: 0;
+  /* Remove padding for header alignment */
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow: hidden;
+  /* For header border-radius */
 }
 
-.transaction-card h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1.5rem;
-  color: var(--text-primary);
+.transaction-tabs-header {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 0;
 }
 
-.transaction-tabs {
-  display: flex;
-  gap: 0.5rem;
-  background: var(--bg-body);
-  padding: 0.5rem;
+.tab-glider {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: calc((100% - 16px) / 3);
+  height: calc(100% - 16px);
+  background: var(--primary);
   border-radius: 12px;
-  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
 }
 
 .tab-btn {
   flex: 1;
   border: none;
   background: none;
-  padding: 0.75rem;
-  border-radius: 8px;
+  padding: 1rem;
+  border-radius: 12px;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 2;
+  font-size: 0.95rem;
 }
 
 .tab-btn.active {
-  background: var(--bg-card);
-  color: var(--primary);
-  box-shadow: var(--shadow-sm);
+  color: white;
+}
+
+.tab-btn:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.card-content-header {
+  padding: 2rem 2rem 1rem;
+}
+
+.transaction-card form {
+  padding: 0 2rem 2rem;
+}
+
+.transaction-card h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .form-group {
@@ -130,9 +157,20 @@
   font-weight: 500;
 }
 
-.status-completed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-.status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-.status-failed { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+.status-completed {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.status-failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
 
 .account-selector {
   width: 100%;

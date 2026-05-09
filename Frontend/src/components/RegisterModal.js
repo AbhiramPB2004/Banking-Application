@@ -55,6 +55,10 @@ const RegisterModal = ({ onClose }) => {
     if (!/^\d{4,6}$/.test(transaction_pin)) {
       setError('Transaction PIN must be 4-6 digits'); return false;
     }
+    const weakPins = ["0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999", "1234", "123456"];
+    if (weakPins.includes(transaction_pin)) {
+      setError('PIN is too weak. Please choose a more secure PIN.'); return false;
+    }
     return true;
   };
 

@@ -8,7 +8,7 @@ const auditService = require("../../audit-service/services/auditService");
 const { calculateEMI, generateAmortizationSchedule, calculateForeclosurePenalty, calculateTotalPayable } = require("../../../shared/utils/emiCalculator");
 const { calculateCreditScore, evaluateDebtToIncomeRatio, determineRiskCategory, getMaxEligibleAmount } = require("../../../shared/utils/creditScoreCalculator");
 const { getProductConfig, MIN_CREDIT_SCORE_GLOBAL } = require("../../../shared/config/loanProducts");
-
+const paymentTrackingService = require("../../payment-tracking-service/services/paymentTracking.service");
 /**
  * Apply for a new loan
  */
@@ -331,6 +331,20 @@ async function processEMIPayment({ loan_id, payment_amount, source_account_id, i
 
     await transaction.commit();
 
+    try {
+      await paymentTrackingService.createPaymentRecord({
+        user_id: userId,
+        payment_type: "EMI",
+        amount: totalDue,
+        status: "SUCCESS",
+        payment_method: "BANK_TRANSFER", // Assuming bank transfer for EMI
+        reference_id: `EMI-${repayment.repayment_id}`,
+        related_entity_id: loan_id,
+        description: `EMI Payment for Loan ${loan_id} (${count} installment(s))`,
+      });
+    } catch (trackError) {
+      console.error("Payment tracking failed for EMI:", trackError.message);
+    }
     await auditService.createAuditLog({
       user_id: userId,
       action_type: count > 1 ? "bulk_emi_prepayment" : "emi_payment",

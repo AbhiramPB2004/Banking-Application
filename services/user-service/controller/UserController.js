@@ -216,6 +216,33 @@ async function getAllUsers(req, res) {
   }
 }
 
+
+async function resetTransactionPin(req, res) {
+  try {
+    const user_id = req.user.user_id;
+    const { password, newPin } = req.body;
+
+    if (!password || !newPin) {
+      return res.status(400).json({
+        success: false,
+        message: "Password and new PIN are required.",
+      });
+    }
+
+    await userService.resetTransactionPin(user_id, password, newPin);
+
+    return res.status(200).json({
+      success: true,
+      message: "Transaction PIN reset successfully.",
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
@@ -223,5 +250,6 @@ module.exports = {
   updateUserStatus,
   getAllUsers,
   verifyKYC,
+  resetTransactionPin,
 };
 
