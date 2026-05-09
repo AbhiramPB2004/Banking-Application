@@ -361,7 +361,18 @@ async function getPortfolio(userId) {
     include: [{ model: InvestmentProduct, as: "product" }],
     order: [["created_at", "DESC"]],
   });
-
+  await auditService.createAuditLog({
+  user_id: userId,
+  action_type: "portfolio_viewed",
+  entity_type: "investment",
+  entity_id: refreshedPortfolio.portfolio_id,
+  status: "success",
+  metadata: {
+    holdings_count: holdings.length,
+    total_invested: refreshedPortfolio.total_invested,
+    current_value: refreshedPortfolio.current_value,
+  },
+});
   return {
     portfolio: refreshedPortfolio,
     holdings,
@@ -384,7 +395,16 @@ async function generateInvestmentStatement(userId) {
     include: [{ model: InvestmentProduct, as: "product" }],
     order: [["created_at", "DESC"]],
   });
-
+await auditService.createAuditLog({
+  user_id: userId,
+  action_type: "investment_statement_generated",
+  entity_type: "investment",
+  entity_id: portfolioData.portfolio.portfolio_id,
+  status: "success",
+  metadata: {
+    transaction_count: transactions.length,
+  },
+});
   return {
     ...portfolioData,
     transactions,
@@ -415,7 +435,15 @@ async function getMarketOverview() {
     });
     return acc;
   }, {});
-
+await auditService.createAuditLog({
+  user_id: null,
+  action_type: "market_overview_viewed",
+  entity_type: "investment",
+  status: "success",
+  metadata: {
+    products_count: products.length,
+  },
+});
   return products.map((product) => {
     const history = historyByProduct[product.product_id] || [];
     const first = history[0]?.nav_value || Number(product.nav_value);
@@ -433,7 +461,16 @@ async function getMarketOverview() {
 async function getProductNavHistory(productId) {
   const product = await InvestmentProduct.findByPk(productId);
   if (!product) throw new Error("Investment product not found.");
-
+await auditService.createAuditLog({
+  user_id: null,
+  action_type: "nav_history_viewed",
+  entity_type: "investment",
+  entity_id: productId,
+  status: "success",
+  metadata: {
+    product_id: productId,
+  },
+});
   return await NavHistory.findAll({
     where: { product_id: productId },
     order: [["nav_date", "ASC"]],

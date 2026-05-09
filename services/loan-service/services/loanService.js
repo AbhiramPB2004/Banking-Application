@@ -385,6 +385,16 @@ async function markDelinquent(loanId) {
   if (totalOverdue >= 3) {
     loan.loan_status = "defaulted";
     await loan.save();
+    await auditService.createAuditLog({
+  user_id: loan.user_id,
+  action_type: "loan_defaulted",
+  entity_type: "loan",
+  entity_id: loanId,
+  status: "success",
+  metadata: {
+    overdue_installments: totalOverdue,
+  },
+});
   }
 
   return { loan_id: loanId, overdue_count: totalOverdue, defaulted: totalOverdue >= 3 };
