@@ -62,23 +62,55 @@ const CreateFDModal = ({ onClose, onSuccess }) => {
     setError('');
   };
 
-  const getInterestRate = (tenureMonths) => {
-    const months = Number(tenureMonths);
-    if (months <= 1.5) return 4.5;
-    if (months <= 6) return 5.5;
-    if (months <= 12) return 7.0;
-    if (months <= 60) return 8.5;
-    return 9.0;
-  };
+const getInterestRate = (tenureMonths) => {
+  const months = Number(tenureMonths);
 
-  const getTenureLabel = (months) => {
-    const monthsNum = Number(months);
-    if (monthsNum <= 1.5) return 'Short Term Investment';
-    if (monthsNum <= 6) return 'Medium Term Investment';
-    if (monthsNum <= 12) return 'Long Term Investment';
-    if (monthsNum <= 60) return 'Extended Term Investment';
-    return 'Maximum Term Investment';
-  };
+  if (months === 3) return 4.5;
+
+  if (months === 6) return 5.5;
+
+  if (months === 12) return 7;
+
+  if (months >= 24 && months <= 60) return 8.5;
+
+  if (months >= 61 && months <= 71) return 9;
+
+  if (months >= 72 && months <= 84) return 10;
+
+  if (months > 84 && months <= 108) return 12;
+
+  if (months > 108 && months <= 120) return 15;
+
+  return 0;
+};
+
+const getTenureLabel = (months) => {
+  const monthsNum = Number(months);
+
+  if (monthsNum === 3) return 'Short Term Investment';
+
+  if (monthsNum === 6) return 'Medium Term Investment';
+
+  if (monthsNum === 12) return 'Long Term Investment';
+
+  if (monthsNum >= 24 && monthsNum <= 60) {
+    return 'Extended Term Investment';
+  }
+
+  if (monthsNum >= 61 && monthsNum <= 84) {
+    return 'Premium Long Term Investment';
+  }
+
+  if (monthsNum > 84 && monthsNum <= 108) {
+    return 'Wealth Growth Investment';
+  }
+
+  if (monthsNum > 108 && monthsNum <= 120) {
+    return 'Maximum Yield Investment';
+  }
+
+  return 'Invalid Tenure';
+};
 
   const handleTenureChange = (e) => {
     const months = e.target.value;
@@ -210,31 +242,49 @@ const CreateFDModal = ({ onClose, onSuccess }) => {
                 <i className="fas fa-clock"></i> Tenure Period
               </label>
               <select
-                name="tenure_months"
-                value={formData.tenure_months}
-                onChange={handleTenureChange}
-                required
-              >
-                <option value="" disabled>Select tenure period</option>
-                <optgroup label="Short Term (Up to 6 months)">
-                  <option value="3">3 months (4.5% p.a.)</option>
-                  <option value="6">6 months (5.5% p.a.)</option>
-                </optgroup>
-                <optgroup label="Medium Term (6-12 months)">
-                  <option value="12">12 months (7.0% p.a.) - 1 year</option>
-                </optgroup>
-                <optgroup label="Long Term (1-5 years)">
-                  <option value="24">24 months (8.5% p.a.) - 2 years</option>
-                  <option value="36">36 months (8.5% p.a.) - 3 years</option>
-                  <option value="48">48 months (8.5% p.a.) - 4 years</option>
-                  <option value="60">60 months (8.5% p.a.) - 5 years</option>
-                </optgroup>
-                <optgroup label="Maximum Term (5+ years)">
-                  <option value="72">72 months (9.0% p.a.) - 6 years</option>
-                  <option value="84">84 months (9.0% p.a.) - 7 years</option>
-                  <option value="120">120 months (9.0% p.a.) - 10 years</option>
-                </optgroup>
-              </select>
+  name="tenure_months"
+  value={formData.tenure_months}
+  onChange={handleTenureChange}
+  required
+>
+  <option value="" disabled>Select tenure period</option>
+
+  <optgroup label="Short Term">
+    <option value="3">3 months (4.5% p.a.)</option>
+    <option value="6">6 months (5.5% p.a.)</option>
+  </optgroup>
+
+  <optgroup label="Medium Term">
+    <option value="12">12 months (7% p.a.) - 1 year</option>
+  </optgroup>
+
+  <optgroup label="Long Term">
+    <option value="24">24 months (8.5% p.a.) - 2 years</option>
+    <option value="36">36 months (8.5% p.a.) - 3 years</option>
+    <option value="48">48 months (8.5% p.a.) - 4 years</option>
+    <option value="60">60 months (8.5% p.a.) - 5 years</option>
+  </optgroup>
+
+  <optgroup label="Premium Long Term">
+    <option value="61">61 months (9% p.a.)</option>
+    <option value="66">66 months (9% p.a.)</option>
+    <option value="71">71 months (9% p.a.)</option>
+  </optgroup>
+
+  <optgroup label="High Growth">
+    <option value="72">72 months (10% p.a.) - 6 years</option>
+    <option value="84">84 months (10% p.a.) - 7 years</option>
+  </optgroup>
+
+  <optgroup label="Wealth Growth">
+    <option value="96">96 months (12% p.a.) - 8 years</option>
+    <option value="108">108 months (12% p.a.) - 9 years</option>
+  </optgroup>
+
+  <optgroup label="Maximum Yield">
+    <option value="120">120 months (15% p.a.) - 10 years</option>
+  </optgroup>
+</select>
               {selectedTenureLabel && (
                 <div className="input-hint">
                   <i className="fas fa-tag"></i>

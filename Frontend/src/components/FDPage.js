@@ -104,46 +104,74 @@ const FDPage = () => {
       </div>
 
       {/* Interest Rates Banner */}
-      <div className="fd-rates-banner">
-        <div className="fd-rates-container">
-          <div className="fd-rate-card">
-            <i className="fas fa-calendar-week"></i>
-            <div className="fd-rate-info">
-              <span className="fd-rate-period">7-45 Days</span>
-              <span className="fd-rate-value">4.5%</span>
-            </div>
-          </div>
-          <div className="fd-rate-card">
-            <i className="fas fa-calendar-alt"></i>
-            <div className="fd-rate-info">
-              <span className="fd-rate-period">46-180 Days</span>
-              <span className="fd-rate-value">5.5%</span>
-            </div>
-          </div>
-          <div className="fd-rate-card">
-            <i className="fas fa-calendar-month"></i>
-            <div className="fd-rate-info">
-              <span className="fd-rate-period">6-12 Months</span>
-              <span className="fd-rate-value">7.0%</span>
-            </div>
-          </div>
-          <div className="fd-rate-card">
-            <i className="fas fa-calendar-year"></i>
-            <div className="fd-rate-info">
-              <span className="fd-rate-period">1-5 Years</span>
-              <span className="fd-rate-value">8.5%</span>
-            </div>
-          </div>
-          <div className="fd-rate-card">
-            <i className="fas fa-gem"></i>
-            <div className="fd-rate-info">
-              <span className="fd-rate-period">5+ Years</span>
-              <span className="fd-rate-value">9.0%</span>
-            </div>
-          </div>
-        </div>
+      {/* Interest Rates Banner */}
+<div className="fd-rates-banner">
+  <div className="fd-rates-container">
+    <div className="fd-rate-card">
+      <i className="fas fa-calendar-week"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">3 Months</span>
+        <span className="fd-rate-value">4.5%</span>
       </div>
+    </div>
 
+    <div className="fd-rate-card">
+      <i className="fas fa-calendar-alt"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">6 Months</span>
+        <span className="fd-rate-value">5.5%</span>
+      </div>
+    </div>
+
+    <div className="fd-rate-card">
+      <i className="fas fa-calendar-month"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">12 Months</span>
+        <span className="fd-rate-value">7%</span>
+      </div>
+    </div>
+
+    <div className="fd-rate-card">
+      <i className="fas fa-calendar-year"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">24 - 60 Months</span>
+        <span className="fd-rate-value">8.5%</span>
+      </div>
+    </div>
+
+    <div className="fd-rate-card">
+      <i className="fas fa-gem"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">61 - 71 Months</span>
+        <span className="fd-rate-value">9%</span>
+      </div>
+    </div>
+
+    <div className="fd-rate-card">
+      <i className="fas fa-star"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">72 - 84 Months</span>
+        <span className="fd-rate-value">10%</span>
+      </div>
+    </div>
+
+    <div className="fd-rate-card">
+      <i className="fas fa-crown"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">85 - 108 Months</span>
+        <span className="fd-rate-value">12%</span>
+      </div>
+    </div>
+
+    <div className="fd-rate-card">
+      <i className="fas fa-medal"></i>
+      <div className="fd-rate-info">
+        <span className="fd-rate-period">109 - 120 Months</span>
+        <span className="fd-rate-value">15%</span>
+      </div>
+    </div>
+  </div>
+</div>
       {/* Summary Cards */}
       <div className="fd-summary-grid">
         <div className="fd-summary-card">
