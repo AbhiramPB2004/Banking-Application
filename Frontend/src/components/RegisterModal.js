@@ -71,12 +71,19 @@ const RegisterModal = ({ onClose }) => {
     if (u.full_name.trim().length < 3) {
       setError('Full name must be at least 3 characters'); return false;
     }
+    if (!/^[A-Za-z\s]+$/.test(u.full_name)) {
+      setError('Full name must contain only alphabets'); return false;
+    }
     const age = new Date().getFullYear() - new Date(u.dob).getFullYear();
     if (age < 18) { setError('You must be at least 18 years old'); return false; }
     const aadhaar = u.aadhaar_number.replace(/\D/g, '');
     if (aadhaar.length !== 12) { setError('Enter valid 12-digit Aadhaar number'); return false; }
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(u.pan_number.toUpperCase())) {
       setError('Enter valid PAN (e.g., ABCDE1234F)'); return false;
+    }
+    const income = Number(u.annual_income);
+    if (isNaN(income) || income < 10000) {
+      setError('Annual income cannot be below 10,000'); return false;
     }
     return true;
   };
