@@ -32,6 +32,19 @@ const ProfilePage = () => {
   });
 
   const handleProfileSave = async () => {
+    // Validations
+    if (!profile.full_name || profile.full_name.trim().length === 0) {
+      return showToast('error', 'Full Name cannot be empty');
+    }
+    if (!/^[A-Za-z\s]+$/.test(profile.full_name)) {
+      return showToast('error', 'Full Name must contain only alphabets');
+    }
+    
+    const income = Number(profile.annual_income);
+    if (isNaN(income) || income < 10000) {
+      return showToast('error', 'Annual Income cannot be below 10,000');
+    }
+
     setLoading(true);
     try {
       await userAPI.updateProfile(profile);

@@ -14,8 +14,9 @@ const Sidebar = () => {
     { path: '/loans', icon: 'fa-hand-holding-usd', label: 'Loans' },
     { path: '/investments', icon: 'fa-chart-line', label: 'Investments' },
     { path: '/fd', icon: 'fa-certificate', label: 'Fixed Deposits' }, // Added FD link
+    { path: '/payment-tracking', icon: 'fa-receipt', label: 'Payment Tracking' },
     { path: '/profile', icon: 'fa-user-circle', label: 'Profile' },
-    { path: '/payment-tracking', icon: 'fa-t', label: 'Payment Tracking' },
+    
 
   ];
 

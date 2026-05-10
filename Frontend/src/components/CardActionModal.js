@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { creditCardAPI } from '../api/api';
+import './CardActionModal.css';
 
 const CardActionModal = ({
   type,
@@ -9,7 +10,7 @@ const CardActionModal = ({
 }) => {
 
   const [formData, setFormData] = useState({
-    amount: '',
+    amount: type === 'payment' ? card.outstanding_balance : '',
     merchant: ''
   });
 
@@ -66,7 +67,7 @@ const CardActionModal = ({
       }
 
       if (res.success) {
-        onSuccess();
+        onSuccess(card.card_id);
         onClose();
       }
 
@@ -85,127 +86,71 @@ const CardActionModal = ({
 
   return (
     <div className="modal-overlay">
-
-      <div
-        className="modal-content"
-        style={{ maxWidth: '500px' }}
-      >
-
-        {/* HEADER */}
-        <div className="modal-header">
-
-          <h2>
-            {isPurchase
-              ? 'Simulate Purchase'
-              : 'Make Payment'}
-          </h2>
-
-          <button
-            className="btn-close"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            <i className="fas fa-times"></i>
-          </button>
-
-        </div>
-
-        {/* ERROR */}
-        {error && (
-          <div
-            className="alert alert-danger"
-            style={{
-              marginBottom: '1rem',
-              whiteSpace: 'pre-line'
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {/* CARD INFO */}
-        <div
-          className="loan-info-box"
-          style={{ marginBottom: '1rem' }}
-        >
-
-          <p>
-            <b>Card:</b> ****
-            {card.card_number?.slice(-4)}
-          </p>
-
-          <p>
-            <b>Available Limit:</b> ₹
-            {Number(card.available_limit).toLocaleString('en-IN')}
-          </p>
-
-        </div>
-
-        {/* FORM */}
+      <div className="modal-content" style={{ maxWidth: '500px' }}>
         <form onSubmit={handleSubmit}>
+          <div className="modal-header">
+            <h2>{isPurchase ? 'Make Purchase' : 'Pay Balance'}</h2>
+            <button className="btn-close" onClick={onClose} disabled={isLoading} type="button">
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
 
-          {/* PURCHASE */}
-          {isPurchase && (
-            <>
+          <div className="modal-body">
+            {error && (
+              <div className="alert alert-danger">
+                <i className="fas fa-exclamation-circle" />
+                <span>{error}</span>
+              </div>
+            )}
 
-              {/* AMOUNT */}
-              <div className="form-group">
+            <div className="modal-info-box">
+              <p><b>Card:</b> ****{card.card_number?.slice(-4)}</p>
+              {isPayment ? (
+                <>
+                  <p><b>Outstanding Balance:</b> <span className="text-danger">₹{Number(card.outstanding_balance).toLocaleString('en-IN')}</span></p>
+                  <p><b>Due Date:</b> {card.due_date ? new Date(card.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}</p>
+                </>
+              ) : (
+                <p><b>Available Limit:</b> ₹{Number(card.available_limit).toLocaleString('en-IN')}</p>
+              )}
+            </div>
 
-                <label>Purchase Amount</label>
-
-                <div className="input-with-icon">
-
-                  <span className="input-icon">
-                    ₹
-                  </span>
-
-                  <input
-                    type="number"
-                    name="amount"
-                    value={formData.amount}
-                    onChange={handleChange}
-                    placeholder="Enter amount"
-                    required
-                    min="1"
-                  />
-
+            {isPurchase && (
+              <>
+                <div className="form-group">
+                  <label>Purchase Amount</label>
+                  <div className="input-with-icon">
+                    <span className="input-icon">₹</span>
+                    <input
+                      type="number"
+                      name="amount"
+                      value={formData.amount}
+                      onChange={handleChange}
+                      placeholder="Enter amount"
+                      required
+                      min="1"
+                    />
+                  </div>
                 </div>
+                <div className="form-group">
+                  <label>Merchant Name</label>
+                  <input
+                    type="text"
+                    name="merchant"
+                    value={formData.merchant}
+                    onChange={handleChange}
+                    placeholder="e.g. Amazon, Swiggy"
+                    required
+                  />
+                </div>
+              </>
+            )}
 
-              </div>
-
-              {/* MERCHANT */}
+            {isPayment && (
               <div className="form-group">
-
-                <label>Merchant Name</label>
-
-                <input
-                  type="text"
-                  name="merchant"
-                  value={formData.merchant}
-                  onChange={handleChange}
-                  placeholder="e.g. Amazon, Swiggy"
-                  required
-                />
-
-              </div>
-
-            </>
-          )}
-
-          {/* PAYMENT */}
-          {isPayment && (
-            <>
-
-              <div className="form-group">
-
                 <label>Payment Amount</label>
-
                 <div className="input-with-icon">
-
-                  <span className="input-icon">
-                    ₹
-                  </span>
-
+                  <span className="input-icon">₹</span>
                   <input
                     type="number"
                     name="amount"
@@ -215,55 +160,25 @@ const CardActionModal = ({
                     required
                     min="1"
                   />
-
                 </div>
-
               </div>
-
-
-
-            </>
-          )}
-
-          {/* ACTIONS */}
-          <div className="loan-modal-actions">
-
-            <button
-              type="button"
-              className="btn-cancel"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="btn-submit"
-              disabled={isLoading}
-            >
-
-              {isLoading ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  {isPurchase
-                    ? 'Complete Purchase'
-                    : 'Make Payment'}
-                </>
-              )}
-
-            </button>
-
+            )}
           </div>
 
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isLoading}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+              {isLoading ? (
+                <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+              ) : (
+                <>{isPurchase ? 'Make Purchase' : 'Pay Balance'}</>
+              )}
+            </button>
+          </div>
         </form>
-
       </div>
-
     </div>
   );
 };
