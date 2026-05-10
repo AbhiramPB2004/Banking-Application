@@ -71,8 +71,28 @@ const RegisterModal = ({ onClose }) => {
     if (u.full_name.trim().length < 3) {
       setError('Full name must be at least 3 characters'); return false;
     }
+    if (u.full_name.trim().length > 50) {
+      setError('Full name cannot exceed 50 characters'); return false;
+    }
     if (!/^[A-Za-z\s]+$/.test(u.full_name)) {
       setError('Full name must contain only alphabets'); return false;
+    }
+
+    if (u.address.trim().length < 10) {
+      setError('Address must be at least 10 characters long'); return false;
+    }
+    if (u.address.trim().length > 250) {
+      setError('Address cannot exceed 250 characters'); return false;
+    }
+
+    if (u.occupation.trim().length < 2) {
+      setError('Occupation must be at least 2 characters'); return false;
+    }
+    if (u.occupation.trim().length > 50) {
+      setError('Occupation cannot exceed 50 characters'); return false;
+    }
+    if (!/^[A-Za-z\s]+$/.test(u.occupation)) {
+      setError('Occupation must contain only alphabets'); return false;
     }
     const age = new Date().getFullYear() - new Date(u.dob).getFullYear();
     if (age < 18) { setError('You must be at least 18 years old'); return false; }
