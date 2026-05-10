@@ -191,38 +191,45 @@ if (data.occupation !== undefined) {
  * Update KYC
  */
 /**
- * Update KYC (Aadhaar & PAN immutable after first set)
+ * Update KYC
  */
 async function updateKYCStatus(user_id, data) {
   const user = await User.findByPk(user_id);
 
   if (!user) throw new Error("User not found.");
 
-  //  Aadhaar update not allowed if already exists
-  if (user.aadhaar_number && data.aadhaar_number) {
-    throw new Error("Aadhaar number cannot be updated once submitted.");
+  if (user.kyc_status === "verified") {
+    throw new Error("KYC is already verified and cannot be edited.");
   }
 
-  //  PAN update not allowed if already exists
-  if (user.pan_number && data.pan_number) {
-    throw new Error("PAN number cannot be updated once submitted.");
+  if (data.aadhaar_number) {
+    const aadhaarClean = data.aadhaar_number.replace(/\s+/g, "");
+    if (!/^\d{12}$/.test(aadhaarClean)) {
+      throw new Error("Aadhaar number must be exactly 12 numeric digits.");
+    }
+    const existingAadhaar = await User.findOne({ where: { aadhaar_number: aadhaarClean, user_id: { [Op.ne]: user_id } } });
+    if (existingAadhaar) {
+      throw new Error("This Aadhaar number is already registered to another account.");
+    }
+    user.aadhaar_number = aadhaarClean;
   }
 
-  //  Set Aadhaar (only first time)
-  if (!user.aadhaar_number && data.aadhaar_number) {
-    user.aadhaar_number = data.aadhaar_number;
+  if (data.pan_number) {
+    const pan = data.pan_number.toUpperCase();
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan)) {
+      throw new Error("Invalid PAN format (e.g., ABCDE1234F).");
+    }
+    const existingPan = await User.findOne({ where: { pan_number: pan, user_id: { [Op.ne]: user_id } } });
+    if (existingPan) {
+      throw new Error("This PAN number is already registered to another account.");
+    }
+    user.pan_number = pan;
   }
 
-  //  Set PAN (only first time)
-  if (!user.pan_number && data.pan_number) {
-    user.pan_number = data.pan_number;
-  }
-
-  //  Update KYC status
   if (data.kyc_status) {
     user.kyc_status = data.kyc_status;
-  } else {
-    user.kyc_status = "verified";
+  } else if (data.aadhaar_number || data.pan_number) {
+    user.kyc_status = "pending";
   }
 
   await user.save();
