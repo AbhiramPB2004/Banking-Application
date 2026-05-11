@@ -172,7 +172,7 @@ const getTenureLabel = (months) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: '650px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content fd-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
             <h2>Create Fixed Deposit</h2>
