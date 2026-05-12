@@ -1,11 +1,32 @@
+// services/account-service/services/accountService.js
+
 const User = require("../../user-service/models/user.model");
 const Account = require("../models/account.model");
 const { sequelize } = require("../../../shared/config/db");
 
-const { generateAccountNumber } = require("../../../shared/utils/accountNumberGenerator");
+const {
+  generateAccountNumber,
+} = require("../../../shared/utils/accountNumberGenerator");
 
 /**
  * Create new account
+ *
+ * Business Rules:
+ * - Savings account:
+ *   - Minimum opening deposit = ₹1,000 (validated in validator)
+ *   - Minimum balance to maintain for transfers = ₹1,000
+ *
+ * - Current account:
+ *   - Minimum opening deposit = ₹5,000
+ *   - Minimum balance to maintain for transfers = ₹5,000
+ *
+ * - Salary account:
+ *   - Minimum opening deposit = ₹0
+ *   - Minimum balance = ₹0
+ *
+ * Note:
+ * - Withdrawal logic allows full balance withdrawal to ₹0.
+ * - Account can be closed when balance becomes ₹0.
  */
 async function createAccount({
   user_id,
@@ -14,14 +35,13 @@ async function createAccount({
   branch_code = "0001",
   ifsc_code = "BANK0001",
 }) {
-
   // Normalize safely
-  const normalizedType = account_type?.toLowerCase()?.trim();
+  const normalizedType =
+    account_type?.toLowerCase()?.trim();
 
   // -------------------------
   // KYC Verification
   // -------------------------
-
   const user = await User.findByPk(user_id);
 
   if (!user) {
@@ -37,14 +57,14 @@ async function createAccount({
   // -------------------------
   // Account Count Validation
   // -------------------------
-
-  const existingAccountsCount = await Account.count({
-    where: {
-      user_id,
-      account_type: normalizedType,
-      status: "active",
-    },
-  });
+  const existingAccountsCount =
+    await Account.count({
+      where: {
+        user_id,
+        account_type: normalizedType,
+        status: "active",
+      },
+    });
 
   // Only 1 salary account allowed
   if (
@@ -58,7 +78,9 @@ async function createAccount({
 
   // Max 5 savings/current accounts
   if (
-    ["savings", "current"].includes(normalizedType) &&
+    ["savings", "current"].includes(
+      normalizedType
+    ) &&
     existingAccountsCount >= 5
   ) {
     throw new Error(
@@ -69,26 +91,40 @@ async function createAccount({
   // -------------------------
   // Unique Account Number Generation
   // -------------------------
-
   let account_number;
   let existingAccount;
 
   do {
-    account_number = generateAccountNumber(
-      "1025",
-      branch_code
-    );
+    account_number =
+      generateAccountNumber(
+        "1025",
+        branch_code
+      );
 
-    existingAccount = await Account.findOne({
-      where: { account_number },
-    });
-
+    existingAccount =
+      await Account.findOne({
+        where: {
+          account_number,
+        },
+      });
   } while (existingAccount);
+
+  // -------------------------
+  // Determine Minimum Balance
+  // -------------------------
+  let min_balance = 0;
+
+  if (normalizedType === "savings") {
+    min_balance = 1000;
+  } else if (normalizedType === "current") {
+    min_balance = 5000;
+  } else if (normalizedType === "salary") {
+    min_balance = 0;
+  }
 
   // -------------------------
   // Create Account
   // -------------------------
-
   return await Account.create({
     user_id,
     account_number,
@@ -99,10 +135,8 @@ async function createAccount({
     balance: initial_deposit,
     available_balance: initial_deposit,
 
-    min_balance:
-      normalizedType === "salary"
-        ? 0
-        : 1000,
+    // Used for transfer validation
+    min_balance,
 
     initial_deposit,
     status: "active",
@@ -112,13 +146,21 @@ async function createAccount({
 /**
  * Get account by ID
  */
-async function getAccountById(account_id, user_id) {
+async function getAccountById(
+  account_id,
+  user_id
+) {
   const account = await Account.findOne({
-    where: { account_id, user_id },
+    where: {
+      account_id,
+      user_id,
+    },
   });
 
   if (!account) {
-    throw new Error("Account not found or unauthorized.");
+    throw new Error(
+      "Account not found or unauthorized."
+    );
   }
 
   return account;
@@ -131,21 +173,32 @@ async function getAccountsByUserId(user_id) {
   return await Account.findAll({
     where: {
       user_id,
-      status: "active", // 🔥 hides closed accounts
+      status: "active",
     },
+    order: [["created_at", "DESC"]],
   });
 }
 
 /**
  * Update balance (credit/debit)
  */
-async function updateBalance(account_id, amount, operation) {
-  const transaction = await sequelize.transaction();
+async function updateBalance(
+  account_id,
+  amount,
+  operation
+) {
+  const transaction =
+    await sequelize.transaction();
 
   try {
-    const account = await Account.findByPk(account_id, { transaction });
+    const account =
+      await Account.findByPk(account_id, {
+        transaction,
+      });
 
-    if (!account) throw new Error("Account not found.");
+    if (!account) {
+      throw new Error("Account not found.");
+    }
 
     if (account.status === "closed") {
       throw new Error("Account is closed.");
@@ -155,28 +208,40 @@ async function updateBalance(account_id, amount, operation) {
       throw new Error("Account is frozen.");
     }
 
-    const current = parseFloat(account.balance);
+    const current = parseFloat(
+      account.balance
+    );
 
     let newBalance =
       operation === "credit"
-      ? current + amount
-      : current - amount;
+        ? current + amount
+        : current - amount;
 
-  // Fix floating-point precision
-  newBalance = parseFloat(newBalance.toFixed(2));
+    // Fix floating-point precision
+    newBalance = parseFloat(
+      newBalance.toFixed(2)
+    );
 
-    if (newBalance < parseFloat(account.min_balance)) {
-      throw new Error("Minimum balance violation.");
+    if (
+      newBalance <
+      parseFloat(account.min_balance)
+    ) {
+      throw new Error(
+        "Minimum balance violation."
+      );
     }
 
     account.balance = newBalance;
-    account.available_balance = newBalance;
+    account.available_balance =
+      newBalance;
 
-    await account.save({ transaction });
+    await account.save({
+      transaction,
+    });
 
     await transaction.commit();
-    return account;
 
+    return account;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -186,26 +251,37 @@ async function updateBalance(account_id, amount, operation) {
 /**
  * Close account
  */
-async function closeAccount(account_id, user_id) {
+async function closeAccount(
+  account_id,
+  user_id
+) {
   const account = await Account.findOne({
-    where: { account_id, user_id },
+    where: {
+      account_id,
+      user_id,
+    },
   });
 
   if (!account) {
-    throw new Error("Account not found or unauthorized.");
+    throw new Error(
+      "Account not found or unauthorized."
+    );
   }
 
   if (account.status === "closed") {
-    throw new Error("Account already closed.");
+    throw new Error(
+      "Account already closed."
+    );
   }
 
-  // 🔥 CRITICAL FIX
   const balance = parseFloat(
-  parseFloat(account.balance).toFixed(2)
-);
+    parseFloat(account.balance).toFixed(2)
+  );
 
-if (balance > 0) {
-    throw new Error("Account balance must be zero before closure.");
+  if (balance > 0) {
+    throw new Error(
+      "Account balance must be zero before closure."
+    );
   }
 
   account.status = "closed";
@@ -217,60 +293,83 @@ if (balance > 0) {
 /**
  * Update account
  */
-async function updateAccount(account_id, user_id, data) {
+async function updateAccount(
+  account_id,
+  user_id,
+  data
+) {
   const account = await Account.findOne({
-    where: { account_id, user_id },
-  });
-
-  if (!account) {
-    throw new Error("Account not found or unauthorized.");
-  }
-
-  if (account.status === "closed") {
-    throw new Error("Cannot update a closed account.");
-  }
-
-  if (account.is_frozen) {
-    throw new Error("Cannot update a frozen account.");
-  }
-
- if (data.account_type) {
-
-  const newType = data.account_type.toLowerCase();
-
-  // Count existing active accounts of requested type
-  const existingAccountsCount = await Account.count({
     where: {
+      account_id,
       user_id,
-      account_type: newType,
-      status: "active",
     },
   });
 
-  // Only 1 salary account allowed
-  if (
-    newType === "salary" &&
-    existingAccountsCount >= 1 &&
-    account.account_type !== "salary"
-  ) {
+  if (!account) {
     throw new Error(
-      "Only one salary account is allowed per user."
+      "Account not found or unauthorized."
     );
   }
 
-  // Max 5 savings/current accounts
-  if (
-    ["savings", "current"].includes(newType) &&
-    existingAccountsCount >= 5 &&
-    account.account_type !== newType
-  ) {
+  if (account.status === "closed") {
     throw new Error(
-      `Maximum 5 ${newType} accounts allowed per user.`
+      "Cannot update a closed account."
     );
   }
 
-  account.account_type = newType;
-}
+  if (account.is_frozen) {
+    throw new Error(
+      "Cannot update a frozen account."
+    );
+  }
+
+  if (data.account_type) {
+    const newType =
+      data.account_type.toLowerCase();
+
+    const existingAccountsCount =
+      await Account.count({
+        where: {
+          user_id,
+          account_type: newType,
+          status: "active",
+        },
+      });
+
+    if (
+      newType === "salary" &&
+      existingAccountsCount >= 1 &&
+      account.account_type !==
+        "salary"
+    ) {
+      throw new Error(
+        "Only one salary account is allowed per user."
+      );
+    }
+
+    if (
+      ["savings", "current"].includes(
+        newType
+      ) &&
+      existingAccountsCount >= 5 &&
+      account.account_type !== newType
+    ) {
+      throw new Error(
+        `Maximum 5 ${newType} accounts allowed per user.`
+      );
+    }
+
+    account.account_type = newType;
+
+    // Update min_balance when account type changes
+    if (newType === "savings") {
+      account.min_balance = 1000;
+    } else if (newType === "current") {
+      account.min_balance = 5000;
+    } else {
+      account.min_balance = 0;
+    }
+  }
 
   await account.save();
 

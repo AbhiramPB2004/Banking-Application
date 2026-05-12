@@ -20,21 +20,27 @@ const Transaction = sequelize.define(
       allowNull: true,
     },
 
+    // ✅ NEW
+    recipient_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
     amount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
     },
 
-   transaction_type: {
-  type: DataTypes.ENUM(
-    "deposit",
-    "withdraw",
-    "internal",
-    "imps",
-    "neft",
-    "rtgs"
-  )
-},
+    transaction_type: {
+      type: DataTypes.ENUM(
+        "deposit",
+        "withdraw",
+        "internal",
+        "imps",
+        "neft",
+        "rtgs"
+      ),
+    },
 
     status: {
       type: DataTypes.ENUM("pending", "success", "failed"),

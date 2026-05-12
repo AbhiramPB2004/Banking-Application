@@ -114,14 +114,14 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
     if (annual_income < requiredIncome) {
       return { eligible: false, reason: `Minimum annual income for ${formData.card_tier} card is ₹${(requiredIncome / 100000).toFixed(0)} Lakhs` };
     }
-
+    
     // D. Score Calculation
     const score = calculateCreditScore({
       annual_income: parseFloat(annual_income),
       existing_liabilities: 0, // Simplified for now
       occupation: occupation
     });
-
+    
     if (score < 500) return { eligible: false, reason: "Credit profile does not meet minimum risk standards" };
 
     // E. Limit Calculation (Income driven + Balance Cap)
