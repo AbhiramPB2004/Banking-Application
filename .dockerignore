@@ -1,0 +1,11 @@
+node_modules
+Frontend/node_modules
+**/node_modules
+build
+.git
+.gitignore
+*.log
+dist
+tmp
+Dockerfile
+fly.toml

@@ -1,7 +1,7 @@
 // src/api/api.js
 // Central API service — all backend calls go through here
 
-const BASE_URL = '';  // CRA proxy handles forwarding to port 5000
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || '';  // CRA proxy handles forwarding to port 5000 when empty
 
 /**
  * Silent token refresh
@@ -113,13 +113,13 @@ export const authAPI = {
    * Manually trigger a token refresh (not usually needed — api.js does it automatically)
    */
   refresh: () =>
-    fetch('/auth/refresh', { method: 'POST', credentials: 'include' }),
+    fetch(`${BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' }),
 
   /**
    * Server-side logout — clears cookies in the Set-Cookie header and revokes DB session
    */
   logout: () =>
-    fetch('/auth/logout', { method: 'POST', credentials: 'include' }),
+    fetch(`${BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' }),
 };
 
 // ─── User API ─────────────────────────────────────

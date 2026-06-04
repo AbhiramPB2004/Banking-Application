@@ -7,9 +7,11 @@ const cors = require("cors");
 const app = express();
 
 // CORS — allow frontend origin with credentials (cookies)
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: FRONTEND_ORIGIN,
     credentials: true,
   })
 );
