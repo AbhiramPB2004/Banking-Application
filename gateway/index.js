@@ -6,6 +6,9 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
+// Trust proxy headers when deployed behind a reverse proxy (Render)
+app.set('trust proxy', 1);
+
 // CORS — allow frontend origin with credentials (cookies)
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
 
@@ -13,6 +16,8 @@ app.use(
   cors({
     origin: FRONTEND_ORIGIN,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 

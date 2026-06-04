@@ -53,11 +53,13 @@ const {
 } = require("../../audit-service/services/auditService");
 
 function getCookieOptions() {
+  const isProduction = process.env.NODE_ENV === "production";
+
   return {
     httpOnly: true,
-    secure:
-      process.env.NODE_ENV === "production",
-    sameSite: "Strict",
+    secure: isProduction,
+    sameSite: isProduction ? "None" : "Lax",
+    path: "/",
   };
 }
 
