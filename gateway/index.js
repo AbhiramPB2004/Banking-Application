@@ -35,7 +35,7 @@ const {
   authenticateToken,
 } = require("../shared/middlewares/authMiddleware");
 const creditCardRoutes = require(
-  "../services/credit-card-service/routes/creditCard.routes"
+  "../services/credit-card-service/routes/creditcard.routes"
 );
 
 // Routes
