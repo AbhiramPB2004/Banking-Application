@@ -1,8 +1,12 @@
 services:
   - type: web
     name: banking-app-api
-    env: docker
-    dockerfilePath: ./Dockerfile
+    env: node
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
     autoDeploy: true
     envVars:
       - key: NODE_ENV
