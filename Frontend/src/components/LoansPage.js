@@ -30,6 +30,7 @@ const LoansPage = () => {
 
   useEffect(() => {
     fetchLoans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleApplySuccess = () => {

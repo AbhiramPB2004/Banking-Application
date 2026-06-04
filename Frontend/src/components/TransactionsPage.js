@@ -10,7 +10,6 @@ const TransactionsPage = () => {
   const { showToast } = useAuth();
 
   const [accounts, setAccounts] = useState([]);
-  const [selectedAccountId, setSelectedAccountId] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,8 +41,6 @@ const TransactionsPage = () => {
             ...prev,
             source_account_id: accountList[0].account_id,
           }));
-
-          setSelectedAccountId(accountList[0].account_id);
         }
       }
     } catch (err) {
@@ -290,10 +287,7 @@ const TransactionsPage = () => {
                 name="source_account_id"
                 className="account-selector"
                 value={formData.source_account_id}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  setSelectedAccountId(e.target.value);
-                }}
+                onChange={handleInputChange}
                 required
               >
                 {accounts.map((acc) => (

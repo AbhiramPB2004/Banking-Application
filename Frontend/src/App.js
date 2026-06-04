@@ -21,15 +21,6 @@ import LoginModal from './components/LoginModal';
 import TransactionsPage from './components/TransactionsPage';
 import PaymentTrackingPage from './components/PaymentTrackingPage';
 
-const Layout = () => (
-  <div className="app-layout">
-    <Sidebar />
-    <div className="main-content animate-fade">
-      <Outlet />
-    </div>
-  </div>
-);
-
 function AppContent() {
   const { isLoggedIn, isLoading, toast } = useAuth();
   const [showRegisterModal, setShowRegisterModal] = useState(false);

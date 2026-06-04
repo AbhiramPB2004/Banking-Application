@@ -112,7 +112,6 @@ const ProfilePage = () => {
   };
 
   const isKYCVerified = currentUser?.kyc_status === 'verified';
-  const isKYCRejected = currentUser?.kyc_status === 'rejected';
 
   return (
     <div className="profile-page">

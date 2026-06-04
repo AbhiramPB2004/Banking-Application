@@ -83,6 +83,7 @@ const CreditCardsPage = () => {
   useEffect(() => {
     fetchCards();
     fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFlip = (id, e) => {

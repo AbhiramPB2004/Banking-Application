@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { fdAPI, accountAPI } from '../api/api';
-import { useAuth } from '../context/AuthContext';
 import './CreateFDModal.css';
 
 const CreateFDModal = ({ onClose, onSuccess }) => {
-  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     account_id: '',
     amount: '',
@@ -23,6 +21,7 @@ const CreateFDModal = ({ onClose, onSuccess }) => {
 
   useEffect(() => {
     calculateReturns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.amount, formData.tenure_months, formData.interest_rate]);
 
   const fetchAccounts = async () => {

@@ -13,6 +13,7 @@ const FDPage = () => {
 
   useEffect(() => {
     fetchFDs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchFDs = async () => {

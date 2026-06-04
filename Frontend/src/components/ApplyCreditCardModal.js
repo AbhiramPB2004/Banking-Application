@@ -13,7 +13,6 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
   const [accounts, setAccounts] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [estimatedLimit, setEstimatedLimit] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +46,7 @@ const ApplyCreditCardModal = ({ onClose, onSuccess }) => {
     const acc = accounts.find(a => a.account_id === formData.source_account_id);
     setSelectedAccount(acc || null);
     if (acc) {
-      setEstimatedLimit(Math.floor(parseFloat(acc.balance) * 0.5));
+      // The selected account is stored for eligibility calculations
     }
   }, [formData.source_account_id, accounts]);
 
